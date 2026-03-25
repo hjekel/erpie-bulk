@@ -457,7 +457,7 @@
         <thead>
           <tr>
             <th>#</th><th>Model</th><th>Gen</th><th>RAM</th><th>SSD</th>
-            <th>Grade</th><th>Status</th><th>ERP</th><th id="thB2B" style="display:none">B2B</th><th id="thB2C" style="display:none">B2C</th><th id="thConf" style="display:none">Conf.</th><th>Qty</th><th>Total</th>
+            <th>Grade</th><th>Status</th><th>ERP</th><th id="thLive" style="display:none">Live</th><th id="thConf" style="display:none">Conf.</th><th>Qty</th><th>Total</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
@@ -591,8 +591,7 @@
     textEl.textContent = 'Searching IT Gigant, Back Market, Refurbished.nl...';
 
     // Show live columns
-    document.getElementById('thB2B').style.display = '';
-    document.getElementById('thB2C').style.display = '';
+    document.getElementById('thLive').style.display = '';
     document.getElementById('thConf').style.display = '';
 
     try {
@@ -687,8 +686,7 @@
     const showLive = !!validationData;
 
     // Show/hide live columns
-    document.getElementById('thB2B').style.display = showLive ? '' : 'none';
-    document.getElementById('thB2C').style.display = showLive ? '' : 'none';
+    document.getElementById('thLive').style.display = showLive ? '' : 'none';
     document.getElementById('thConf').style.display = showLive ? '' : 'none';
 
     let tbody = '';
@@ -700,16 +698,12 @@
 
       let liveCols = '';
       if (showLive) {
-        const b2bHtml = v && v.livePriceB2B
-          ? (v.sourceB2B ? `<a href="${esc(v.sourceB2B)}" target="_blank">&euro;${fmt(v.livePriceB2B)}</a>` : `&euro;${fmt(v.livePriceB2B)}`)
-          : '&mdash;';
-        const b2cHtml = v && v.livePriceB2C
-          ? (v.sourceB2C ? `<a href="${esc(v.sourceB2C)}" target="_blank">&euro;${fmt(v.livePriceB2C)}</a>` : `&euro;${fmt(v.livePriceB2C)}`)
+        const livePriceHtml = v && v.livePrice
+          ? (v.source ? `<a href="${v.source}" target="_blank">&euro;${fmt(v.livePrice)}</a>` : `&euro;${fmt(v.livePrice)}`)
           : '&mdash;';
         const conf = v ? v.confidence : 'NONE';
         liveCols = `
-          <td class="money">${b2bHtml}</td>
-          <td class="money">${b2cHtml}</td>
+          <td class="money">${livePriceHtml}</td>
           <td class="center"><span class="confidence-badge confidence-${conf}">${conf}</span></td>`;
       }
 
@@ -729,7 +723,7 @@
     });
     document.getElementById('resultsBody').innerHTML = tbody;
 
-    const extraCols = showLive ? 3 : 0;
+    const extraCols = showLive ? 2 : 0;
     document.getElementById('resultsFoot').innerHTML = `
       <tr>
         <td colspan="${7 + extraCols}"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
@@ -854,8 +848,7 @@
     document.getElementById('textInput').value = '';
     document.getElementById('results').classList.remove('visible');
     document.getElementById('validateStatus').classList.remove('visible');
-    document.getElementById('thB2B').style.display = 'none';
-    document.getElementById('thB2C').style.display = 'none';
+    document.getElementById('thLive').style.display = 'none';
     document.getElementById('thConf').style.display = 'none';
     hideError();
   };

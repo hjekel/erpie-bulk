@@ -1,6 +1,6 @@
 'use strict';
 
-const { searchBrave } = require('../lib/web-search');
+const { searchBrave, searchBraveB2C } = require('../lib/web-search');
 
 /**
  * Calculate confidence based on delta between calculated and live price
@@ -60,14 +60,23 @@ module.exports = async function handler(req, res) {
     for (const [key, device] of uniqueModels) {
       const brand = device.brand || '';
       const model = device.model || '';
-      const ram = device.ram || "";
-      const storage = device.storage || "";
-      const query = `${brand} ${model} ${ram} ${storage} refurbished kopen prijs`.trim();
+      const ram = device.ram ? `${device.ram}GB` : '';
+      const storage = device.storage ? `${device.storage}GB` : '';
 
-      const result = await searchBrave(query);
+      const b2bQuery = `${brand} ${model} ${ram} ${storage} refurbished site:itgigant.nl OR site:thebrokersite.com`;
+      const b2cQuery = `${brand} ${model} ${ram} ${storage} refurbished kopen prijs`;
 
-      const livePrice = result ? median(result.prices) : null;
+      const [b2bResult, b2cResult] = await Promise.all([
+        searchBrave(b2bQuery),
+        searchBraveB2C(b2cQuery),
+      ]);
+
+      const livePriceB2B = b2bResult ? median(b2bResult.prices) : null;
+      const livePriceB2C = b2cResult ? median(b2cResult.prices) : null;
       const calculatedERP = device.advisedPrice || 0;
+
+      // Use B2B price for confidence calculation
+      const livePrice = livePriceB2B || livePriceB2C;
       const delta = livePrice ? livePrice - calculatedERP : null;
       const deltaPercent = (livePrice && calculatedERP)
         ? Math.round(((livePrice - calculatedERP) / calculatedERP) * 100)
@@ -76,10 +85,12 @@ module.exports = async function handler(req, res) {
       validations.push({
         model,
         calculatedERP,
-        livePrice,
+        livePriceB2B,
+        livePriceB2C,
+        sourceB2B: b2bResult?.source || null,
+        sourceB2C: b2cResult?.source || null,
         delta,
         deltaPercent,
-        source: result?.source || null,
         confidence: calculateConfidence(calculatedERP, livePrice),
       });
     }
@@ -95,10 +106,12 @@ module.exports = async function handler(req, res) {
       return validationMap.get(key) || {
         model: d.model,
         calculatedERP: d.advisedPrice || 0,
-        livePrice: null,
+        livePriceB2B: null,
+        livePriceB2C: null,
+        sourceB2B: null,
+        sourceB2C: null,
         delta: null,
         deltaPercent: null,
-        source: null,
         confidence: 'NONE',
       };
     });
