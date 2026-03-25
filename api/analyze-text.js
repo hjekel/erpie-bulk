@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   try {
-    const { text = '', dealName = 'Unnamed Deal', region = 'EU' } = req.body || {};
+    const { text = '', dealName = 'Unnamed Deal', region = 'EU', liveValidation = false } = req.body || {};
 
     if (!text.trim()) {
       return res.status(400).json({ ok: false, error: 'No text provided' });
@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       dealName,
       format,
+      liveValidation,
       results,
       summary,
     });

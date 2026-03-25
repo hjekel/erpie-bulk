@@ -27,6 +27,7 @@ module.exports = async function handler(req, res) {
 
     const dealName = (fields.dealName?.[0]) || 'Unnamed Deal';
     const region = (fields.region?.[0]) || 'EU';
+    const liveValidation = (fields.liveValidation?.[0]) === 'true';
 
     // Read file into buffer
     const fs = require('fs');
@@ -50,6 +51,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       dealName,
       format,
+      liveValidation,
       results,
       summary,
     });

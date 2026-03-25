@@ -23,6 +23,7 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
   try {
     const dealName = req.body.dealName || 'Unnamed Deal';
     const region = req.body.region || 'EU';
+    const liveValidation = req.body.liveValidation === 'true';
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -30,7 +31,7 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
     const devices = parsed.devices || parsed;
     const analysis = analyzeDevices(devices, region);
 
-    res.json({ dealName, format: 'file', ...analysis });
+    res.json({ dealName, format: 'file', liveValidation, ...analysis });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -39,7 +40,7 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
 // POST /api/analyze-text — text paste
 app.post('/api/analyze-text', (req, res) => {
   try {
-    const { text, dealName = 'Unnamed Deal', region = 'EU' } = req.body;
+    const { text, dealName = 'Unnamed Deal', region = 'EU', liveValidation = false } = req.body;
 
     if (!text) return res.status(400).json({ error: 'No text provided' });
 
@@ -47,7 +48,7 @@ app.post('/api/analyze-text', (req, res) => {
     const devices = parsed.devices || parsed;
     const analysis = analyzeDevices(devices, region);
 
-    res.json({ dealName, format: 'text', ...analysis });
+    res.json({ dealName, format: 'text', liveValidation, ...analysis });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
