@@ -27,11 +27,13 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
+    const t0 = Date.now();
     const parsed = parseFile(req.file.buffer, req.file.originalname);
     const devices = parsed.devices || parsed;
     const analysis = analyzeDevices(devices, region);
+    const processingTimeMs = Date.now() - t0;
 
-    res.json({ dealName, format: 'file', liveValidation, ...analysis });
+    res.json({ dealName, format: 'file', liveValidation, processingTimeMs, ...analysis });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -44,11 +46,13 @@ app.post('/api/analyze-text', (req, res) => {
 
     if (!text) return res.status(400).json({ error: 'No text provided' });
 
+    const t0 = Date.now();
     const parsed = parseText(text);
     const devices = parsed.devices || parsed;
     const analysis = analyzeDevices(devices, region);
+    const processingTimeMs = Date.now() - t0;
 
-    res.json({ dealName, format: 'text', liveValidation, ...analysis });
+    res.json({ dealName, format: 'text', liveValidation, processingTimeMs, ...analysis });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

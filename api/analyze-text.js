@@ -18,6 +18,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ ok: false, error: 'No text provided' });
     }
 
+    const t0 = Date.now();
     const { devices, format } = parseText(text);
 
     if (!devices || !devices.length) {
@@ -28,12 +29,14 @@ module.exports = async function handler(req, res) {
     }
 
     const { results, summary } = analyzeDevices(devices, region);
+    const processingTimeMs = Date.now() - t0;
 
     res.status(200).json({
       ok: true,
       dealName,
       format,
       liveValidation,
+      processingTimeMs,
       results,
       summary,
     });

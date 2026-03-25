@@ -221,7 +221,7 @@
   .summary-card .sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
   .status-bar {
-    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
   }
   .status-pill {
     padding: 5px 14px; border-radius: 999px;
@@ -661,11 +661,15 @@
       </div>
     `;
 
-    // Status pills
+    // Status pills + processing time
+    const timeStr = data.processingTimeMs != null
+      ? `<span style="margin-left:auto;color:#888;font-size:13px">&#9201; Parsed in ${(data.processingTimeMs / 1000).toFixed(2)}s</span>`
+      : '';
     document.getElementById('statusBar').innerHTML = `
       <span class="status-pill" style="background:#00c85320;color:#00c853;border:1px solid #00c853">GO: ${summary.goCount || 0}</span>
       <span class="status-pill" style="background:#ffab0020;color:#ffab00;border:1px solid #ffab00">WATCH: ${summary.watchCount || 0}</span>
       <span class="status-pill" style="background:#d5000020;color:#d50000;border:1px solid #d50000">NO-GO: ${summary.nogoCount || 0}</span>
+      ${timeStr}
     `;
 
     // Recommendation

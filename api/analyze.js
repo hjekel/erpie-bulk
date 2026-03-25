@@ -34,15 +34,16 @@ module.exports = async function handler(req, res) {
     const buffer = fs.readFileSync(file.filepath);
     const filename = file.originalFilename || 'upload.xlsx';
 
-    // Parse
+    // Parse + price with timing
+    const t0 = Date.now();
     const { devices, format } = parseFile(buffer, filename);
 
     if (!devices || !devices.length) {
       return res.status(400).json({ ok: false, error: 'No valid devices found in file' });
     }
 
-    // Price
     const { results, summary } = analyzeDevices(devices, region);
+    const processingTimeMs = Date.now() - t0;
 
     // Cleanup temp file
     try { fs.unlinkSync(file.filepath); } catch (e) { /* ignore */ }
@@ -52,6 +53,7 @@ module.exports = async function handler(req, res) {
       dealName,
       format,
       liveValidation,
+      processingTimeMs,
       results,
       summary,
     });
