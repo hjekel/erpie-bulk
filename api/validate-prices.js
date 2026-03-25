@@ -60,7 +60,9 @@ module.exports = async function handler(req, res) {
     for (const [key, device] of uniqueModels) {
       const brand = device.brand || '';
       const model = device.model || '';
-      const query = `${brand} ${model} refurbished price site:itgigant.nl OR site:refurbished.nl OR site:backmarket.nl`;
+      const ram = device.ram || "";
+      const storage = device.storage || "";
+      const query = `${brand} ${model} ${ram} ${storage} refurbished kopen prijs`.trim();
 
       const result = await searchBrave(query);
 
