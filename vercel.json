@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ],
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "api/analyze-text.js": {
+      "maxDuration": 15
+    },
+    "api/export-excel.js": {
+      "maxDuration": 15,
+      "memory": 1024
+    },
+    "api/export-html.js": {
+      "maxDuration": 10
+    }
+  }
+}

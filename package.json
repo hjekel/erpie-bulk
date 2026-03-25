@@ -1,0 +1,13 @@
+{
+  "name": "erpie-bulk",
+  "version": "1.0.0",
+  "description": "ERPIE Bulk Pricing - IT Asset Disposition bulk pricing tool",
+  "private": true,
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "formidable": "^3.5.1",
+    "multer": "^2.1.1",
+    "xlsx": "^0.18.5"
+  }
+}
