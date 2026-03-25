@@ -67,6 +67,10 @@ app.post('/api/export-excel', async (req, res) => {
   }
 });
 
+// POST /api/validate-prices — live price validation
+const validatePricesHandler = require('./api/validate-prices');
+app.post('/api/validate-prices', validatePricesHandler);
+
 // POST /api/export-html — generate HTML one-pager
 app.post('/api/export-html', (req, res) => {
   try {
