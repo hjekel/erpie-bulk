@@ -713,9 +713,12 @@
           <td class="center"><span class="confidence-badge confidence-${conf}">${conf}</span></td>`;
       }
 
+      const gQuery = encodeURIComponent(`${d.brand || ''} ${d.model || ''} ${d.ramGb || ''}GB ${d.ssdGb || ''}GB refurbished kopen`.trim());
+      const gUrl = `https://www.google.com/search?q=${gQuery}`;
+
       tbody += `<tr>
         <td class="num">${i + 1}</td>
-        <td>${esc(shortModelName(d.model))}</td>
+        <td>${esc(shortModelName(d.model))} <a href="${gUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-left:4px;font-size:11px;text-decoration:none;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;cursor:pointer;line-height:1.2;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'" title="Search Google"><svg width="10" height="10" viewBox="0 0 48 48" style="vertical-align:middle"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/><path fill="#FBBC05" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.7-5.5C29.9 36.8 27.1 38 24 38c-6.1 0-11.3-3.8-13.2-9.2l-7 5.4C7.5 41.8 15.1 46 24 46z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.8-2.8 5.1-5.3 6.7l6.7 5.5C41.7 37.3 44.5 31 44.5 24c0-1.3-.2-2.7-.5-4z" transform="translate(0,-1)"/></svg></a></td>
         <td class="center">${esc(d.gen || '')}</td>
         <td class="center">${d.ramGb || '&mdash;'}GB</td>
         <td class="center">${d.ssdGb || '&mdash;'}GB</td>
