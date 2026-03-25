@@ -272,6 +272,34 @@
     font-size: 11px; font-weight: 700;
     display: inline-block;
   }
+  .confidence-badge {
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    display: inline-block;
+  }
+  .confidence-HIGH { background: #00c85320; color: #00c853; border: 1px solid #00c853; }
+  .confidence-MEDIUM { background: #ffab0020; color: #ffab00; border: 1px solid #ffab00; }
+  .confidence-LOW { background: #d5000020; color: #d50000; border: 1px solid #d50000; }
+  .confidence-NONE { background: var(--border)33; color: var(--text3); border: 1px solid var(--border); }
+
+  .validate-checkbox {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 12px; font-size: 13px; color: var(--text2);
+  }
+  .validate-checkbox input[type=checkbox] {
+    width: 16px; height: 16px; accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .validate-checkbox label { cursor: pointer; }
+
+  .validate-status {
+    display: none; align-items: center; gap: 10px;
+    padding: 12px 18px; margin-bottom: 20px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; color: var(--text2);
+  }
+  .validate-status.visible { display: flex; }
+  .validate-status .spinner { border-top-color: var(--accent); border-color: var(--accent)33; }
   tfoot td {
     padding: 12px 14px; font-weight: 700;
     background: var(--bg2); color: var(--text);
@@ -396,6 +424,11 @@
       </button>
       <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
     </div>
+
+    <div class="validate-checkbox">
+      <input type="checkbox" id="liveValidation">
+      <label for="liveValidation">&#128270; Validate with live prices</label>
+    </div>
   </div>
 
   <!-- ─── RESULTS SECTION ─────────────────────────────────── -->
@@ -414,12 +447,17 @@
       <button class="btn-export" onclick="sendTelegram()">&#128172; Copy Telegram Format</button>
     </div>
 
+    <div class="validate-status" id="validateStatus">
+      <span class="spinner"></span>
+      <span id="validateText">Searching IT Gigant, Back Market...</span>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>#</th><th>Model</th><th>Gen</th><th>RAM</th><th>SSD</th>
-            <th>Grade</th><th>Status</th><th>ERP</th><th>Qty</th><th>Total</th>
+            <th>Grade</th><th>Status</th><th>ERP</th><th id="thLive" style="display:none">Live</th><th id="thConf" style="display:none">Conf.</th><th>Qty</th><th>Total</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
@@ -443,6 +481,7 @@
   // ─── State ──────────────────────────────────────────────
   let currentFile = null;
   let analysisData = null;
+  let validationData = null;
   const API_BASE = '';
 
   // ─── Tabs ───────────────────────────────────────────────
@@ -530,13 +569,66 @@
       }
 
       analysisData = { ...data, dealName };
+      validationData = null;
       renderResults(data);
+
+      // Trigger live validation if checkbox is checked
+      if (document.getElementById('liveValidation').checked) {
+        runLiveValidation(data.results);
+      }
     } catch (err) {
       showError('Network error: ' + err.message);
     }
 
     setLoading(false);
   };
+
+  // ─── Live Price Validation ────────────────────────────
+  async function runLiveValidation(results) {
+    const statusEl = document.getElementById('validateStatus');
+    const textEl = document.getElementById('validateText');
+    statusEl.classList.add('visible');
+    textEl.textContent = 'Searching IT Gigant, Back Market, Refurbished.nl...';
+
+    // Show live columns
+    document.getElementById('thLive').style.display = '';
+    document.getElementById('thConf').style.display = '';
+
+    try {
+      const devices = results.map(r => ({
+        brand: r.brand || '',
+        model: r.model || '',
+        cpu: r.cpu || '',
+        ram: r.ramGb || 0,
+        storage: r.ssdGb || 0,
+        advisedPrice: r.advisedPrice || 0,
+      }));
+
+      const resp = await fetch(API_BASE + '/api/validate-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devices }),
+      });
+
+      const data = await resp.json();
+
+      if (!data.ok) {
+        textEl.textContent = 'Validation failed: ' + (data.error || 'Unknown error');
+        setTimeout(() => statusEl.classList.remove('visible'), 4000);
+        return;
+      }
+
+      validationData = data.validations;
+      textEl.textContent = `Validated ${data.validations.length} models`;
+      setTimeout(() => statusEl.classList.remove('visible'), 2000);
+
+      // Re-render table with live data
+      renderResultsTable(analysisData.results, analysisData.summary);
+    } catch (err) {
+      textEl.textContent = 'Validation error: ' + err.message;
+      setTimeout(() => statusEl.classList.remove('visible'), 4000);
+    }
+  }
 
   // ─── Render Results ─────────────────────────────────────
   function renderResults(data) {
@@ -579,13 +671,36 @@
     // Recommendation
     document.getElementById('recBox').innerHTML = `<strong>Recommendation:</strong> ${esc(summary.recommendation || '')}`;
 
-    // Table
+    renderResultsTable(results, summary);
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderResultsTable(results, summary) {
+    const fmt = n => new Intl.NumberFormat('nl-NL').format(n || 0);
     const statusColor = s => s === 'GO' ? '#00c853' : s === 'WATCH' ? '#ffab00' : '#d50000';
+    const showLive = !!validationData;
+
+    // Show/hide live columns
+    document.getElementById('thLive').style.display = showLive ? '' : 'none';
+    document.getElementById('thConf').style.display = showLive ? '' : 'none';
+
     let tbody = '';
     results.forEach((d, i) => {
       const qty = d.qty || 1;
       const total = (d.advisedPrice || 0) * qty;
       const sc = statusColor(d.status);
+      const v = validationData ? validationData[i] : null;
+
+      let liveCols = '';
+      if (showLive) {
+        const livePrice = v && v.livePrice ? `&euro;${fmt(v.livePrice)}` : '&mdash;';
+        const conf = v ? v.confidence : 'NONE';
+        liveCols = `
+          <td class="money">${livePrice}</td>
+          <td class="center"><span class="confidence-badge confidence-${conf}">${conf}</span></td>`;
+      }
+
       tbody += `<tr>
         <td class="num">${i + 1}</td>
         <td>${esc(shortModelName(d.model))}</td>
@@ -595,22 +710,22 @@
         <td class="center">${esc(d.grade || '&mdash;')}</td>
         <td class="center"><span class="status-badge" style="background:${sc}20;color:${sc};border:1px solid ${sc}">${d.status}</span></td>
         <td class="money">&euro;${fmt(d.advisedPrice)}</td>
+        ${liveCols}
         <td class="center">${qty}</td>
         <td class="money">&euro;${fmt(total)}</td>
       </tr>`;
     });
     document.getElementById('resultsBody').innerHTML = tbody;
 
+    const extraCols = showLive ? 2 : 0;
     document.getElementById('resultsFoot').innerHTML = `
       <tr>
-        <td colspan="7"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
+        <td colspan="${7 + extraCols}"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
         <td class="money"><strong>&euro;${fmt(summary.avgValue)}</strong></td>
         <td class="center"><strong>${summary.total || 0}</strong></td>
         <td class="money"><strong>&euro;${fmt(summary.totalValue)}</strong></td>
       </tr>
     `;
-
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ─── Exports ────────────────────────────────────────────
@@ -721,10 +836,14 @@
   window.resetAll = function() {
     currentFile = null;
     analysisData = null;
+    validationData = null;
     document.getElementById('fileInput').value = '';
     document.getElementById('fileName').textContent = '';
     document.getElementById('textInput').value = '';
     document.getElementById('results').classList.remove('visible');
+    document.getElementById('validateStatus').classList.remove('visible');
+    document.getElementById('thLive').style.display = 'none';
+    document.getElementById('thConf').style.display = 'none';
     hideError();
   };
 
