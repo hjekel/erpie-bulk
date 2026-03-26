@@ -13,13 +13,37 @@ const { parseFile, parseText } = require('./lib/parser');
 const { calculatePrice, analyzeDevices } = require('./lib/pricing-engine');
 const { generateExcel } = require('./lib/excel-export');
 const { generateHTMLReport } = require('./lib/html-report');
+const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing } = require('./lib/openclaw-pricing');
 
 // Multer for file upload
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
+// ─── Shared pricing logic: OpenClaw first, local fallback ────────────────────
+async function priceDevices(devices, region, dealName) {
+  const t0 = Date.now();
+
+  // Try OpenClaw first
+  const groups = groupDevicesForPricing(devices);
+  console.log(`[pricing] ${groups.length} groups, trying OpenClaw...`);
+
+  const openclawResult = await priceViaOpenClaw(groups, region, dealName);
+  if (openclawResult && openclawResult.results.length > 0) {
+    const analysis = mapOpenClawResults(devices, openclawResult);
+    const processingTimeMs = Date.now() - t0;
+    console.log(`[pricing] OpenClaw success: ${analysis.results.length} groups, €${analysis.summary.totalValue} in ${processingTimeMs}ms`);
+    return { ...analysis, processingTimeMs, pricingSource: 'openclaw' };
+  }
+
+  // Fallback to local pricing engine
+  console.log('[pricing] OpenClaw unavailable, falling back to local engine');
+  const analysis = analyzeDevices(devices, region);
+  const processingTimeMs = Date.now() - t0;
+  return { ...analysis, processingTimeMs, pricingSource: 'local' };
+}
+
 // POST /api/analyze — file upload
-app.post('/api/analyze', upload.single('file'), (req, res) => {
+app.post('/api/analyze', upload.single('file'), async (req, res) => {
   try {
     const dealName = req.body.dealName || 'Unnamed Deal';
     const region = req.body.region || 'EU';
@@ -27,33 +51,41 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const t0 = Date.now();
     const parsed = parseFile(req.file.buffer, req.file.originalname);
     const devices = parsed.devices || parsed;
-    const analysis = analyzeDevices(devices, region);
-    const processingTimeMs = Date.now() - t0;
 
-    res.json({ dealName, format: 'file', liveValidation, processingTimeMs, ...analysis });
+    if (!devices || !devices.length) {
+      return res.status(400).json({ error: 'No valid devices found in file' });
+    }
+
+    const analysis = await priceDevices(devices, region, dealName);
+
+    res.json({ dealName, format: parsed.format || 'file', liveValidation, ...analysis });
   } catch (e) {
+    console.error('[analyze] Error:', e);
     res.status(500).json({ error: e.message });
   }
 });
 
 // POST /api/analyze-text — text paste
-app.post('/api/analyze-text', (req, res) => {
+app.post('/api/analyze-text', async (req, res) => {
   try {
     const { text, dealName = 'Unnamed Deal', region = 'EU', liveValidation = false } = req.body;
 
     if (!text) return res.status(400).json({ error: 'No text provided' });
 
-    const t0 = Date.now();
     const parsed = parseText(text);
     const devices = parsed.devices || parsed;
-    const analysis = analyzeDevices(devices, region);
-    const processingTimeMs = Date.now() - t0;
 
-    res.json({ dealName, format: 'text', liveValidation, processingTimeMs, ...analysis });
+    if (!devices || !devices.length) {
+      return res.status(400).json({ error: 'Geen apparaten herkend in de tekst.' });
+    }
+
+    const analysis = await priceDevices(devices, region, dealName);
+
+    res.json({ dealName, format: 'text', liveValidation, ...analysis });
   } catch (e) {
+    console.error('[analyze-text] Error:', e);
     res.status(500).json({ error: e.message });
   }
 });

@@ -2,6 +2,7 @@
 
 const { parseText } = require('../lib/parser');
 const { analyzeDevices } = require('../lib/pricing-engine');
+const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing } = require('../lib/openclaw-pricing');
 
 module.exports = async function handler(req, res) {
   // CORS
@@ -28,7 +29,19 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const { results, summary } = analyzeDevices(devices, region);
+    // Try OpenClaw first, fallback to local
+    let analysis;
+    let pricingSource = 'local';
+    const groups = groupDevicesForPricing(devices);
+    const openclawResult = await priceViaOpenClaw(groups, region, dealName);
+
+    if (openclawResult && openclawResult.results.length > 0) {
+      analysis = mapOpenClawResults(devices, openclawResult);
+      pricingSource = 'openclaw';
+    } else {
+      analysis = analyzeDevices(devices, region);
+    }
+
     const processingTimeMs = Date.now() - t0;
 
     res.status(200).json({
@@ -37,8 +50,8 @@ module.exports = async function handler(req, res) {
       format,
       liveValidation,
       processingTimeMs,
-      results,
-      summary,
+      pricingSource,
+      ...analysis,
     });
   } catch (err) {
     console.error('[analyze-text] Error:', err);
