@@ -830,12 +830,17 @@
     const pctNogo = totalQty ? Math.round(nogoQty / totalQty * 100) : 0;
 
     const text = [
-      `ERPIE RAPPORT \u2014 ${dealName} ${date}`,
-      `${totalQty} stuks \u00B7 ${groupCount} modellen`,
+      `\u{1F99E} ERPIE RAPPORT \u2014 ${dealName}`,
+      `${date}`,
+      `\u{1F4E6} ${totalQty} assets \u00B7 \u20AC${fmtNum(summary.totalValue)}`,
+      '\u2501'.repeat(22),
       '',
       ...lines,
       '',
-      `TOTAAL: \u20AC${fmtNum(summary.totalValue)} | GO: ${pctGo}% | WATCH: ${pctWatch}% | NO-GO: ${pctNogo}%`,
+      '\u2501'.repeat(22),
+      `TOTAAL: \u20AC${fmtNum(summary.totalValue)}`,
+      `\u{1F7E2} GO: ${pctGo}% | \u{1F7E1} WATCH: ${pctWatch}% | \u{1F534} NO-GO: ${pctNogo}%`,
+      `Bid range: \u20AC${fmtNum(summary.bidLow)} \u2013 \u20AC${fmtNum(summary.bidHigh)}`,
     ].join('\n');
 
     navigator.clipboard.writeText(text).then(() => {
