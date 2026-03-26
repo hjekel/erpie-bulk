@@ -362,7 +362,7 @@
 <div class="header">
   <div class="header-left">
     <h1><span class="emoji">&#x1F99E;</span> ERPIE Bulk</h1>
-    <div class="sub">IT Asset Disposition &middot; Bulk Pricing Tool</div>
+    <div class="sub">IT Asset Bulk Pricing Tool</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">🌙</button>
@@ -654,11 +654,6 @@
         <div class="value">&euro;${fmt(summary.avgValue)}</div>
         <div class="sub">per device</div>
       </div>
-      <div class="summary-card">
-        <div class="label">Bid Range</div>
-        <div class="value" style="font-size:20px">&euro;${fmt(summary.bidLow)} &ndash; &euro;${fmt(summary.bidHigh)}</div>
-        <div class="sub">suggested offer</div>
-      </div>
     `;
 
     // Status pills + processing time
@@ -695,12 +690,12 @@
       const sc = statusColor(d.status);
       const v = validationData ? validationData[i] : null;
 
-      let liveCols = '';
-      if (showLive) {
-        const b2b = v?.livePriceB2B;
-        const b2c = v?.livePriceB2C;
-        const source = v?.sourceB2B || v?.sourceB2C;
-        let liveHtml = '&mdash;';
+      // LIVE column: always render <td> to match <th> count, hide when no live data
+      let liveHtml = '&mdash;';
+      if (showLive && v) {
+        const b2b = v.livePriceB2B;
+        const b2c = v.livePriceB2C;
+        const source = v.sourceB2B || v.sourceB2C;
         if (b2b && b2c) {
           const lo = Math.min(b2b, b2c);
           const hi = Math.max(b2b, b2c);
@@ -713,8 +708,9 @@
         if (source && liveHtml !== '&mdash;') {
           liveHtml = `<a href="${esc(source)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">${liveHtml} &#128279;</a>`;
         }
-        liveCols = `<td class="money">${liveHtml}</td>`;
       }
+      const liveDisplay = showLive ? '' : 'display:none';
+      const liveCols = `<td class="money" style="${liveDisplay}">${liveHtml}</td>`;
 
       const gQuery = encodeURIComponent(`${d.brand || ''} ${d.model || ''} ${d.ramGb || ''}GB ${d.ssdGb || ''}GB refurbished kopen`.trim());
       const gUrl = `https://www.google.com/search?q=${gQuery}`;
@@ -735,11 +731,12 @@
     });
     document.getElementById('resultsBody').innerHTML = tbody;
 
-    const extraCols = showLive ? 1 : 0;
+    const liveFootDisplay = showLive ? '' : 'display:none';
     document.getElementById('resultsFoot').innerHTML = `
       <tr>
-        <td colspan="${7 + extraCols}"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
+        <td colspan="7"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
         <td class="money"><strong>&euro;${fmt(summary.avgValue)}</strong></td>
+        <td style="${liveFootDisplay}"></td>
         <td class="center"><strong>${summary.total || 0}</strong></td>
         <td class="money"><strong>&euro;${fmt(summary.totalValue)}</strong></td>
       </tr>
@@ -875,7 +872,17 @@
     const text = document.getElementById('btnText');
     const spinner = document.getElementById('btnSpinner');
     btn.disabled = on;
-    text.textContent = on ? 'Analysing...' : 'Parse & Analyse';
+    if (on) {
+      text.textContent = '\u23F3 Analyseren...';
+      btn.style.background = 'var(--accent)';
+      btn.style.color = 'white';
+      btn.style.borderColor = 'var(--accent)';
+    } else {
+      text.textContent = 'Parse & Analyse';
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
     spinner.style.display = on ? 'inline-block' : 'none';
   }
 
