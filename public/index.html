@@ -458,7 +458,7 @@
         <thead>
           <tr>
             <th>#</th><th>Model</th><th>Gen</th><th>RAM</th><th>SSD</th>
-            <th>Grade</th><th>Status</th><th>ERP</th><th id="thB2B" style="display:none">B2B</th><th id="thB2C" style="display:none">B2C</th><th id="thConf" style="display:none">Conf.</th><th>Qty</th><th>Total</th>
+            <th>Grade</th><th>Status</th><th>ERP</th><th id="thLive" style="display:none">Live</th><th>Qty</th><th>Total</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
@@ -591,10 +591,8 @@
     statusEl.classList.add('visible');
     textEl.textContent = 'Searching IT Gigant, Back Market, Refurbished.nl...';
 
-    // Show live columns
-    document.getElementById('thB2B').style.display = '';
-    document.getElementById('thB2C').style.display = '';
-    document.getElementById('thConf').style.display = '';
+    // Show live column
+    document.getElementById('thLive').style.display = '';
 
     try {
       const devices = results.map(r => ({
@@ -687,10 +685,8 @@
     const statusColor = s => s === 'GO' ? '#00c853' : s === 'WATCH' ? '#ffab00' : '#d50000';
     const showLive = !!validationData;
 
-    // Show/hide live columns
-    document.getElementById('thB2B').style.display = showLive ? '' : 'none';
-    document.getElementById('thB2C').style.display = showLive ? '' : 'none';
-    document.getElementById('thConf').style.display = showLive ? '' : 'none';
+    // Show/hide live column
+    document.getElementById('thLive').style.display = showLive ? '' : 'none';
 
     let tbody = '';
     results.forEach((d, i) => {
@@ -701,17 +697,23 @@
 
       let liveCols = '';
       if (showLive) {
-        const b2bHtml = v && v.livePriceB2B
-          ? (v.sourceB2B ? `<a href="${esc(v.sourceB2B)}" target="_blank">&euro;${fmt(v.livePriceB2B)}</a>` : `&euro;${fmt(v.livePriceB2B)}`)
-          : '&mdash;';
-        const b2cHtml = v && v.livePriceB2C
-          ? (v.sourceB2C ? `<a href="${esc(v.sourceB2C)}" target="_blank">&euro;${fmt(v.livePriceB2C)}</a>` : `&euro;${fmt(v.livePriceB2C)}`)
-          : '&mdash;';
-        const conf = v ? v.confidence : 'NONE';
-        liveCols = `
-          <td class="money">${b2bHtml}</td>
-          <td class="money">${b2cHtml}</td>
-          <td class="center"><span class="confidence-badge confidence-${conf}">${conf}</span></td>`;
+        const b2b = v?.livePriceB2B;
+        const b2c = v?.livePriceB2C;
+        const source = v?.sourceB2B || v?.sourceB2C;
+        let liveHtml = '&mdash;';
+        if (b2b && b2c) {
+          const lo = Math.min(b2b, b2c);
+          const hi = Math.max(b2b, b2c);
+          liveHtml = lo === hi ? `&euro;${fmt(lo)}` : `&euro;${fmt(lo)}&ndash;${fmt(hi)}`;
+        } else if (b2b) {
+          liveHtml = `&euro;${fmt(b2b)}`;
+        } else if (b2c) {
+          liveHtml = `&euro;${fmt(b2c)}`;
+        }
+        if (source && liveHtml !== '&mdash;') {
+          liveHtml = `<a href="${esc(source)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">${liveHtml} &#128279;</a>`;
+        }
+        liveCols = `<td class="money">${liveHtml}</td>`;
       }
 
       const gQuery = encodeURIComponent(`${d.brand || ''} ${d.model || ''} ${d.ramGb || ''}GB ${d.ssdGb || ''}GB refurbished kopen`.trim());
@@ -733,7 +735,7 @@
     });
     document.getElementById('resultsBody').innerHTML = tbody;
 
-    const extraCols = showLive ? 3 : 0;
+    const extraCols = showLive ? 1 : 0;
     document.getElementById('resultsFoot').innerHTML = `
       <tr>
         <td colspan="${7 + extraCols}"><strong>TOTAAL (${summary.total || 0} devices)</strong></td>
@@ -863,9 +865,7 @@
     document.getElementById('textInput').value = '';
     document.getElementById('results').classList.remove('visible');
     document.getElementById('validateStatus').classList.remove('visible');
-    document.getElementById('thB2B').style.display = 'none';
-    document.getElementById('thB2C').style.display = 'none';
-    document.getElementById('thConf').style.display = 'none';
+    document.getElementById('thLive').style.display = 'none';
     hideError();
   };
 
