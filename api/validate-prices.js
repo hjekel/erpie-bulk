@@ -63,19 +63,36 @@ module.exports = async function handler(req, res) {
       const ram = device.ram ? `${device.ram}GB` : '';
       const storage = device.storage ? `${device.storage}GB` : '';
 
-      const b2bQuery = `${brand} ${model} ${ram} ${storage} refurbished site:itgigant.nl OR site:thebrokersite.com`;
+      // B2B query: try site-restricted first, fallback to open search
+      const b2bSiteQuery = `${brand} ${model} ${ram} ${storage} refurbished site:itgigant.nl OR site:thebrokersite.com`;
+      const b2bOpenQuery = `${brand} ${model} ${ram} ${storage} refurbished wholesale B2B prijs`;
       const b2cQuery = `${brand} ${model} ${ram} ${storage} refurbished kopen prijs`;
 
-      const [b2bResult, b2cResult] = await Promise.all([
-        searchBrave(b2bQuery),
+      const [b2bSiteResult, b2cResult] = await Promise.all([
+        searchBrave(b2bSiteQuery),
         searchBraveB2C(b2cQuery),
       ]);
+
+      // Fallback: if site-restricted B2B returned nothing, try open B2B search
+      let b2bResult = b2bSiteResult;
+      let b2bQueryUsed = 'site-restricted';
+      if (!b2bResult) {
+        b2bResult = await searchBrave(b2bOpenQuery);
+        if (b2bResult) {
+          b2bQueryUsed = 'open-fallback';
+          console.log(`[validate] ${model}: B2B site search null → open fallback found ${b2bResult.prices.length} prices`);
+        } else {
+          console.log(`[validate] ${model}: B2B both queries returned null`);
+        }
+      } else {
+        console.log(`[validate] ${model}: B2B site search found ${b2bResult.prices.length} prices`);
+      }
 
       const livePriceB2B = b2bResult ? median(b2bResult.prices) : null;
       const livePriceB2C = b2cResult ? median(b2cResult.prices) : null;
       const calculatedERP = device.advisedPrice || 0;
 
-      // Use B2B price for confidence calculation
+      // Use B2B price for confidence calculation, fallback to B2C
       const livePrice = livePriceB2B || livePriceB2C;
       const delta = livePrice ? livePrice - calculatedERP : null;
       const deltaPercent = (livePrice && calculatedERP)
@@ -89,6 +106,7 @@ module.exports = async function handler(req, res) {
         livePriceB2C,
         sourceB2B: b2bResult?.source || null,
         sourceB2C: b2cResult?.source || null,
+        b2bQueryUsed,
         delta,
         deltaPercent,
         confidence: calculateConfidence(calculatedERP, livePrice),
