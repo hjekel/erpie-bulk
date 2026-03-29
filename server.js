@@ -13,6 +13,11 @@ const { parseFile, parseText } = require('./lib/parser');
 const { calculatePrice, analyzeDevices } = require('./lib/pricing-engine');
 const { generateExcel } = require('./lib/excel-export');
 const { generateHTMLReport } = require('./lib/html-report');
+
+// PDF and DOCX support
+let pdfParse, mammoth;
+try { pdfParse = require('pdf-parse'); } catch (e) { console.warn('[startup] pdf-parse not installed — PDF upload disabled'); }
+try { mammoth = require('mammoth'); } catch (e) { console.warn('[startup] mammoth not installed — DOCX upload disabled'); }
 const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing } = require('./lib/openclaw-pricing');
 
 // Multer for file upload
@@ -51,11 +56,35 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const parsed = parseFile(req.file.buffer, req.file.originalname);
+    const ext = (req.file.originalname || '').toLowerCase().split('.').pop();
+    const mime = (req.file.mimetype || '').toLowerCase();
+    let parsed;
+
+    // PDF → extract text → text parser
+    if (ext === 'pdf' || mime === 'application/pdf') {
+      if (!pdfParse) return res.status(400).json({ error: 'PDF support not installed (npm install pdf-parse)' });
+      const pdfData = await pdfParse(req.file.buffer);
+      console.log(`[upload] PDF: ${pdfData.numpages} pages, ${pdfData.text.length} chars extracted`);
+      parsed = parseText(pdfData.text);
+      parsed.format = 'PDF';
+    }
+    // DOCX → extract text → text parser
+    else if (ext === 'docx' || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      if (!mammoth) return res.status(400).json({ error: 'DOCX support not installed (npm install mammoth)' });
+      const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+      console.log(`[upload] DOCX: ${result.value.length} chars extracted`);
+      parsed = parseText(result.value);
+      parsed.format = 'DOCX';
+    }
+    // Excel / CSV / TXT → existing parser
+    else {
+      parsed = parseFile(req.file.buffer, req.file.originalname);
+    }
+
     const devices = parsed.devices || parsed;
 
     if (!devices || !devices.length) {
-      return res.status(400).json({ error: 'No valid devices found in file' });
+      return res.status(400).json({ error: 'No valid devices found in file. Supported: .xlsx, .xls, .csv, .pdf, .docx, .txt' });
     }
 
     const analysis = await priceDevices(devices, region, dealName);
