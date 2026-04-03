@@ -18,7 +18,7 @@ const { generateHTMLReport } = require('./lib/html-report');
 let pdfParse, mammoth;
 try { pdfParse = require('pdf-parse'); } catch (e) { console.warn('[startup] pdf-parse not installed — PDF upload disabled'); }
 try { mammoth = require('mammoth'); } catch (e) { console.warn('[startup] mammoth not installed — DOCX upload disabled'); }
-const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing } = require('./lib/openclaw-pricing');
+const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing, normalizeViaOpenClaw } = require('./lib/openclaw-pricing');
 
 // Multer for file upload
 const multer = require('multer');
@@ -115,6 +115,49 @@ app.post('/api/analyze-text', async (req, res) => {
     res.json({ dealName, format: 'text', liveValidation, ...analysis });
   } catch (e) {
     console.error('[analyze-text] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/normalize — AI normalisation (Stage 1 of two-stage rocket)
+app.post('/api/normalize', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: 'No text provided' });
+
+    // Try OpenClaw AI normalisation first
+    const aiResult = await normalizeViaOpenClaw(text);
+    if (aiResult) {
+      return res.json(aiResult);
+    }
+
+    // Fallback: use local parser and format output as standard lines
+    console.log('[normalize] OpenClaw unavailable, falling back to local parser');
+    const parsed = parseText(text);
+    const devices = parsed.devices || [];
+
+    if (!devices.length) {
+      return res.status(400).json({ error: 'Geen apparaten herkend in de tekst.' });
+    }
+
+    const lines = devices.map(d => {
+      const parts = [d.model];
+      if (d.cpu) parts.push(d.cpu);
+      if (d.ram) parts.push(typeof d.ram === 'number' ? d.ram + 'GB' : d.ram);
+      if (d.ssd) parts.push(typeof d.ssd === 'number' ? d.ssd + 'GB' : d.ssd);
+      parts.push('Grade ' + (d.grade || 'B'));
+      return `${d.qty || 1}x ${parts.join(' \u00b7 ')}`;
+    });
+
+    const assetCount = devices.reduce((s, d) => s + (d.qty || 1), 0);
+    res.json({
+      normalised: lines.join('\n'),
+      assetCount,
+      modelCount: devices.length,
+      source: 'local',
+    });
+  } catch (e) {
+    console.error('[normalize] Error:', e);
     res.status(500).json({ error: e.message });
   }
 });

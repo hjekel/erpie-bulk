@@ -346,6 +346,143 @@
     margin-top: 40px;
   }
 
+  /* ─── STAGE 1: NORMALISER ────────────────────────────────── */
+  .stage-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .stage-header {
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .stage-header h2 {
+    font-size: 18px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .stage-header .stage-badge {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: var(--accent)18; border: 1px solid var(--accent)44;
+    padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .stage-body { margin-top: 18px; }
+  .stage-hint {
+    font-size: 12px; color: var(--text3); margin-top: 8px;
+  }
+  .normalize-input {
+    width: 100%; min-height: 180px; padding: 14px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px;
+    resize: vertical; outline: none; transition: border-color .2s;
+  }
+  .normalize-input:focus { border-color: var(--accent); }
+  .normalize-input::placeholder { color: var(--text3); }
+  .btn-normalize {
+    margin-top: 14px; padding: 14px 32px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #000; font-weight: 700; font-size: 15px;
+    border: none; border-radius: 8px;
+    cursor: pointer; transition: all .2s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-normalize:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent)44; }
+  .btn-normalize:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .preview-panel {
+    margin-top: 20px; padding: 20px;
+    background: var(--bg2);
+    border: 2px solid #00c85344;
+    border-radius: var(--radius);
+    display: none;
+    animation: slideIn .3s ease;
+  }
+  .preview-panel.visible { display: block; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .preview-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; font-size: 15px; font-weight: 700; color: #00c853;
+  }
+  .preview-stats {
+    display: flex; gap: 20px; margin-bottom: 14px;
+  }
+  .preview-stat {
+    font-size: 13px; color: var(--text2);
+  }
+  .preview-stat strong { color: var(--text); font-size: 18px; }
+  .preview-text {
+    width: 100%; min-height: 140px; padding: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px;
+    resize: vertical; outline: none;
+  }
+  .preview-text:focus { border-color: var(--accent); }
+  .preview-actions {
+    display: flex; gap: 12px; margin-top: 14px;
+  }
+  .btn-send {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #00c853 0%, #00a844 100%);
+    color: #fff; font-weight: 700; font-size: 14px;
+    border: none; border-radius: 8px;
+    cursor: pointer; transition: all .2s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-send:hover { transform: translateY(-1px); box-shadow: 0 4px 16px #00c85344; }
+
+  .stage-connector {
+    text-align: center; padding: 8px 0; color: var(--text3);
+    font-size: 20px;
+  }
+
+  /* ─── STAGE 2: PROGRESS METER ──────────────────────────── */
+  .progress-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .progress-panel.visible { display: block; }
+  .progress-panel h3 {
+    font-size: 16px; color: var(--text); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .progress-track {
+    width: 100%; height: 10px;
+    background: var(--bg2); border-radius: 999px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent) 0%, #00c853 100%);
+    border-radius: 999px;
+    transition: width .6s ease;
+  }
+  .progress-pct {
+    text-align: right; font-size: 13px; font-weight: 700;
+    color: var(--accent); margin-top: -4px; margin-bottom: 12px;
+  }
+  .progress-steps { list-style: none; }
+  .progress-steps li {
+    padding: 6px 0; font-size: 13px; color: var(--text3);
+    display: flex; align-items: center; gap: 10px;
+    transition: color .3s;
+  }
+  .progress-steps li.active { color: var(--accent); font-weight: 600; }
+  .progress-steps li.done { color: #00c853; }
+  .progress-steps li .step-icon { width: 20px; text-align: center; }
+  .progress-steps li.active .step-icon .spinner-sm {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--accent)33; border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+
   /* ─── RESPONSIVE ────────────────────────────────────────── */
   @media (max-width: 768px) {
     .header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
@@ -353,6 +490,10 @@
     .deal-row { flex-direction: column; }
     .summary-cards { grid-template-columns: repeat(2, 1fr); }
     .summary-card .value { font-size: 22px; }
+    .stage-section { padding: 18px; }
+    .btn-normalize, .btn-send { width: 100%; justify-content: center; }
+    .preview-actions { flex-direction: column; }
+    .preview-stats { flex-direction: column; gap: 6px; }
   }
 </style>
 </head>
@@ -372,6 +513,58 @@
 
 <!-- ═══ MAIN ═══ -->
 <div class="container">
+
+  <!-- ═══ STAGE 1: UNIVERSAL INPUT NORMALISER ═══ -->
+  <div class="stage-section" id="stage1">
+    <div class="stage-header" onclick="document.getElementById('stage1body').style.display=document.getElementById('stage1body').style.display==='none'?'block':'none'">
+      <h2>&#128270; Universele Input Parser <span class="stage-badge">Stage 1</span></h2>
+    </div>
+    <div class="stage-body" id="stage1body">
+      <textarea class="normalize-input" id="normalizeInput"
+        placeholder="Plak hier alles in &#8212; email tekst, tabel, PDF inhoud, Excel kopie, elke volgorde, elk formaat.&#10;ERPIE normaliseert het automatisch.&#10;&#10;Voorbeeld:&#10;Geachte, hierbij ons lot: 20x Dell Latitude 5420 i5-1145G7 16GB 256GB grade B&#10;10x HP EliteBook 840 G8 8GB 256GB. Mvg, Pieter"></textarea>
+      <div class="stage-hint">Ondersteunt: email met handtekening, Excel/CSV plak, Blancco export, vrije tekst, genummerde lijsten, aaneengeplakte tabellen</div>
+      <button class="btn-normalize" id="normalizeBtn" onclick="doNormalize()">
+        <span id="normBtnText">&#129504; Normaliseer &amp; Herken</span>
+        <span id="normSpinner" class="spinner" style="display:none"></span>
+      </button>
+
+      <!-- Preview panel (hidden until normalisation completes) -->
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-header">&#9989; <span id="previewTitle">ERPIE heeft assets herkend</span></div>
+        <div class="preview-stats">
+          <div class="preview-stat"><strong id="previewAssets">0</strong> assets</div>
+          <div class="preview-stat"><strong id="previewModels">0</strong> modellen</div>
+          <div class="preview-stat" id="previewSourceWrap" style="font-size:11px;color:var(--text3)">via <span id="previewSource"></span></div>
+        </div>
+        <textarea class="preview-text" id="previewText" rows="8"></textarea>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;">Controleer de lijst hierboven. Pas aan indien nodig, druk dan op Verstuur.</div>
+        <div class="preview-actions">
+          <button class="btn-send" onclick="sendToErpie()">&#128640; Verstuur naar ERPIE</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('previewPanel').classList.remove('visible')">Annuleren</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-connector">&#9660;</div>
+
+  <!-- ═══ STAGE 2: PRICING ═══ -->
+
+  <!-- Progress meter (shown during analysis) -->
+  <div class="progress-panel" id="progressPanel">
+    <h3>&#9881;&#65039; ERPIE is aan het werk...</h3>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-pct" id="progressPct">0%</div>
+    <ul class="progress-steps" id="progressSteps">
+      <li id="pStep0"><span class="step-icon">&#9203;</span> Input analyseren...</li>
+      <li id="pStep1"><span class="step-icon">&#9203;</span> Assets herkennen...</li>
+      <li id="pStep2"><span class="step-icon">&#9203;</span> ERPIE pricing engine starten...</li>
+      <li id="pStep3"><span class="step-icon">&#9203;</span> Prijzen berekenen via Eureka Rule Book...</li>
+      <li id="pStep4"><span class="step-icon">&#9203;</span> Live marktprijzen ophalen (B2B + B2C)...</li>
+      <li id="pStep5"><span class="step-icon">&#9203;</span> Rapport samenstellen...</li>
+      <li id="pStep6"><span class="step-icon">&#9203;</span> Klaar!</li>
+    </ul>
+  </div>
 
   <!-- ─── INPUT SECTION ───────────────────────────────────── -->
   <div class="input-section">
@@ -522,14 +715,125 @@
     }
   });
 
-  // ─── Analyse ────────────────────────────────────────────
+  // ─── Stage 1: Normalize ──────────────────────────────────
+  window.doNormalize = async function() {
+    const raw = document.getElementById('normalizeInput').value.trim();
+    if (!raw) { showError('Plak eerst tekst in het invoerveld.'); return; }
+
+    const btn = document.getElementById('normalizeBtn');
+    const btnText = document.getElementById('normBtnText');
+    const spinner = document.getElementById('normSpinner');
+    btn.disabled = true;
+    btnText.textContent = 'Analyseren...';
+    spinner.style.display = '';
+    hideError();
+
+    try {
+      const resp = await fetch(API_BASE + '/api/normalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: raw }),
+      });
+      const data = await resp.json();
+      if (data.error) { showError(data.error); return; }
+
+      // Show preview panel
+      document.getElementById('previewTitle').textContent =
+        'ERPIE heeft ' + data.assetCount + ' assets herkend in ' + data.modelCount + ' modellen';
+      document.getElementById('previewAssets').textContent = data.assetCount;
+      document.getElementById('previewModels').textContent = data.modelCount;
+      document.getElementById('previewSource').textContent = data.source === 'openclaw' ? 'AI (OpenClaw)' : 'lokale parser';
+      document.getElementById('previewText').value = data.normalised;
+      document.getElementById('previewPanel').classList.add('visible');
+    } catch (err) {
+      showError('Normalisatie mislukt: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btnText.innerHTML = '&#129504; Normaliseer &amp; Herken';
+      spinner.style.display = 'none';
+    }
+  };
+
+  window.sendToErpie = function() {
+    const normalised = document.getElementById('previewText').value.trim();
+    if (!normalised) return;
+    // Switch to text tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="text"]').classList.add('active');
+    document.getElementById('panel-text').classList.add('active');
+    // Fill text input and auto-trigger
+    document.getElementById('textInput').value = normalised;
+    if (!document.getElementById('dealName').value.trim()) {
+      document.getElementById('dealName').value = 'Deal ' + new Date().toLocaleDateString('nl-NL');
+    }
+    window.doAnalyze();
+  };
+
+  // ─── Stage 2: Progress meter helpers ───────────────────
+  function showProgress() {
+    document.getElementById('progressPanel').classList.add('visible');
+    // Reset all steps
+    for (let i = 0; i <= 6; i++) {
+      const el = document.getElementById('pStep' + i);
+      el.className = '';
+      el.querySelector('.step-icon').innerHTML = '&#9203;';
+    }
+    setProgress(0);
+  }
+  function hideProgress() {
+    document.getElementById('progressPanel').classList.remove('visible');
+  }
+  function setProgress(pct) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+  }
+  function markStep(idx, status) {
+    const el = document.getElementById('pStep' + idx);
+    if (status === 'active') {
+      el.className = 'active';
+      el.querySelector('.step-icon').innerHTML = '<span class="spinner-sm"></span>';
+    } else if (status === 'done') {
+      el.className = 'done';
+      el.querySelector('.step-icon').innerHTML = '&#9989;';
+    }
+  }
+  function updateStepText(idx, text) {
+    const el = document.getElementById('pStep' + idx);
+    const icon = el.querySelector('.step-icon').outerHTML;
+    el.innerHTML = icon + ' ' + text;
+  }
+
+  // Smooth progress animation between checkpoints
+  let progressTimer = null;
+  function animateProgressTo(target, durationMs) {
+    if (progressTimer) clearInterval(progressTimer);
+    const start = parseFloat(document.getElementById('progressFill').style.width) || 0;
+    const delta = target - start;
+    const steps = Math.max(1, Math.round(durationMs / 50));
+    let step = 0;
+    progressTimer = setInterval(() => {
+      step++;
+      const pct = start + delta * (step / steps);
+      setProgress(Math.min(pct, target));
+      if (step >= steps) clearInterval(progressTimer);
+    }, 50);
+  }
+
+  // ─── Analyse (with progress meter) ─────────────────────
   window.doAnalyze = async function() {
     const dealName = document.getElementById('dealName').value.trim() || 'Unnamed Deal';
     const region = document.getElementById('region').value;
     const activeTab = document.querySelector('.tab.active').dataset.tab;
+    const doLive = document.getElementById('liveValidation').checked;
 
     hideError();
     setLoading(true);
+    showProgress();
+
+    // Step 0: Input analyseren
+    markStep(0, 'active');
+    animateProgressTo(10, 500);
 
     try {
       let response;
@@ -537,13 +841,26 @@
       if (activeTab === 'file') {
         if (!currentFile) {
           showError('Please select a file first.');
-          setLoading(false);
+          setLoading(false); hideProgress();
           return;
         }
         const formData = new FormData();
         formData.append('file', currentFile);
         formData.append('dealName', dealName);
         formData.append('region', region);
+
+        // Step 1: Assets herkennen
+        await new Promise(r => setTimeout(r, 300));
+        markStep(0, 'done'); markStep(1, 'active');
+        animateProgressTo(20, 400);
+
+        // Step 2+3: Pricing engine
+        await new Promise(r => setTimeout(r, 400));
+        markStep(1, 'done'); markStep(2, 'active');
+        animateProgressTo(30, 300);
+        await new Promise(r => setTimeout(r, 300));
+        markStep(2, 'done'); markStep(3, 'active');
+        animateProgressTo(doLive ? 55 : 80, 15000);
 
         response = await fetch(API_BASE + '/api/analyze', {
           method: 'POST',
@@ -553,9 +870,23 @@
         const text = document.getElementById('textInput').value.trim();
         if (!text) {
           showError('Please paste device data first.');
-          setLoading(false);
+          setLoading(false); hideProgress();
           return;
         }
+
+        // Step 1: Assets herkennen
+        await new Promise(r => setTimeout(r, 300));
+        markStep(0, 'done'); markStep(1, 'active');
+        animateProgressTo(20, 400);
+
+        // Step 2+3: Pricing engine
+        await new Promise(r => setTimeout(r, 400));
+        markStep(1, 'done'); markStep(2, 'active');
+        animateProgressTo(30, 300);
+        await new Promise(r => setTimeout(r, 300));
+        markStep(2, 'done'); markStep(3, 'active');
+        animateProgressTo(doLive ? 55 : 80, 15000);
+
         response = await fetch(API_BASE + '/api/analyze-text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -563,23 +894,51 @@
         });
       }
 
+      // API returned — jump progress
+      markStep(3, 'done');
+
       const data = await response.json();
       if (data.error) {
         showError(data.error);
-        setLoading(false);
+        setLoading(false); hideProgress();
         return;
+      }
+
+      // Update step 1 text with actual counts
+      if (data.summary) {
+        updateStepText(1, data.summary.total + ' assets herkend in ' + data.summary.totalGroups + ' modellen');
       }
 
       analysisData = { ...data, dealName };
       validationData = null;
-      renderResults(data);
 
-      // Trigger live validation if checkbox is checked
-      if (document.getElementById('liveValidation').checked) {
-        runLiveValidation(data.results);
+      if (doLive) {
+        // Step 4: Live validation
+        markStep(4, 'active');
+        animateProgressTo(85, 10000);
+        renderResults(data);
+        await runLiveValidation(data.results);
+        markStep(4, 'done');
+      } else {
+        setProgress(85);
+        renderResults(data);
       }
+
+      // Step 5+6: Rapport + Klaar
+      markStep(5, 'active');
+      animateProgressTo(95, 500);
+      await new Promise(r => setTimeout(r, 500));
+      markStep(5, 'done');
+      markStep(6, 'done');
+      setProgress(100);
+
+      // Hide progress after a moment
+      await new Promise(r => setTimeout(r, 800));
+      hideProgress();
+
     } catch (err) {
       showError('Network error: ' + err.message);
+      hideProgress();
     }
 
     setLoading(false);
