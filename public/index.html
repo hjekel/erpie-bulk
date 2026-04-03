@@ -424,6 +424,7 @@
         <span id="btnSpinner" class="spinner" style="display:none"></span>
       </button>
       <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+      <button class="btn btn-secondary" onclick="loadSample()" style="font-size:13px;padding:10px 16px;">&#128203; Load Sample</button>
     </div>
 
     <div class="validate-checkbox">
@@ -864,6 +865,22 @@
     document.getElementById('validateStatus').classList.remove('visible');
     document.getElementById('thLive').style.display = 'none';
     hideError();
+  };
+
+  // ─── Load Sample ────────────────────────────────────────
+  window.loadSample = function() {
+    const sample = `20x Dell Latitude 5420 · i5-1145G7 · 16GB · 512GB · Grade B
+15x HP EliteBook 840 G8 · i5-1135G7 · 8GB · 256GB · Grade B
+10x Lenovo ThinkPad T14 Gen2 · i5-1135G7 · 16GB · 256GB · Grade A
+5x Apple MacBook Air M1 · 8GB · 256GB · Grade B
+8x Dell Latitude 7420 · i7-1185G7 · 16GB · 512GB · Grade A`;
+    // Switch to text tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="text"]').classList.add('active');
+    document.getElementById('panel-text').classList.add('active');
+    document.getElementById('textInput').value = sample;
+    document.getElementById('dealName').value = 'Sample Deal';
   };
 
   // ─── Helpers ────────────────────────────────────────────
