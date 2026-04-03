@@ -381,16 +381,7 @@
   }
   .normalize-input:focus { border-color: var(--accent); }
   .normalize-input::placeholder { color: var(--text3); }
-  .btn-normalize {
-    margin-top: 14px; padding: 14px 32px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-    color: #000; font-weight: 700; font-size: 15px;
-    border: none; border-radius: 8px;
-    cursor: pointer; transition: all .2s;
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn-normalize:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent)44; }
-  .btn-normalize:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  /* btn-normalize removed — Stage 1 uses .btn class for consistency */
 
   .preview-panel {
     margin-top: 20px; padding: 20px;
@@ -435,8 +426,15 @@
   .btn-send:hover { transform: translateY(-1px); box-shadow: 0 4px 16px #00c85344; }
 
   .stage-connector {
-    text-align: center; padding: 8px 0; color: var(--text3);
-    font-size: 20px;
+    text-align: center; padding: 8px 0; color: var(--accent);
+    font-size: 20px; transition: opacity .3s;
+  }
+  .stage-connector.pulse {
+    animation: connectorPulse 1.2s ease infinite;
+  }
+  @keyframes connectorPulse {
+    0%, 100% { opacity: .4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
   }
 
   /* ─── STAGE 2: PROGRESS METER ──────────────────────────── */
@@ -505,9 +503,11 @@
     <h1><span class="emoji">&#x1F99E;</span> ERPIE Bulk</h1>
     <div class="sub">IT Asset Bulk Pricing Tool</div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">🌙</button>
-    <span class="version">v1.0</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button id="flagNL" onclick="setLanguage('nl')" style="background:none;border:none;font-size:20px;cursor:pointer;opacity:1;transition:opacity .2s" title="Nederlands">&#127475;&#127473;</button>
+    <button id="flagEN" onclick="setLanguage('en')" style="background:none;border:none;font-size:20px;cursor:pointer;opacity:0.4;transition:opacity .2s" title="English">&#127468;&#127463;</button>
+    <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">&#127769;</button>
+    <span class="version">v2.0</span>
   </div>
 </div>
 
@@ -517,52 +517,69 @@
   <!-- ═══ STAGE 1: UNIVERSAL INPUT NORMALISER ═══ -->
   <div class="stage-section" id="stage1">
     <div class="stage-header" onclick="document.getElementById('stage1body').style.display=document.getElementById('stage1body').style.display==='none'?'block':'none'">
-      <h2>&#128270; Universele Input Parser <span class="stage-badge">Stage 1</span></h2>
+      <h2><span data-i18n="universalTitle">&#128270; Universele Input Parser</span> <span class="stage-badge">Stage 1</span></h2>
     </div>
     <div class="stage-body" id="stage1body">
-      <textarea class="normalize-input" id="normalizeInput"
-        placeholder="Plak hier alles in &#8212; email tekst, tabel, PDF inhoud, Excel kopie, elke volgorde, elk formaat.&#10;ERPIE normaliseert het automatisch.&#10;&#10;Voorbeeld:&#10;Geachte, hierbij ons lot: 20x Dell Latitude 5420 i5-1145G7 16GB 256GB grade B&#10;10x HP EliteBook 840 G8 8GB 256GB. Mvg, Pieter"></textarea>
-      <div class="stage-hint">Ondersteunt: email met handtekening, Excel/CSV plak, Blancco export, vrije tekst, genummerde lijsten, aaneengeplakte tabellen</div>
-      <button class="btn-normalize" id="normalizeBtn" onclick="doNormalize()">
-        <span id="normBtnText">&#129504; Normaliseer &amp; Herken</span>
-        <span id="normSpinner" class="spinner" style="display:none"></span>
-      </button>
+      <textarea class="normalize-input" id="normalizeInput" data-i18n="universalPlaceholder"
+        placeholder="Plak hier alles in &#8212; email tekst, tabel, PDF inhoud, Excel kopie, elke volgorde, elk formaat. ERPIE normaliseert het automatisch."></textarea>
+      <div class="stage-hint" data-i18n="universalHint">Ondersteunt: email met handtekening, Excel/CSV plak, Blancco export, vrije tekst, genummerde lijsten, aaneengeplakte tabellen</div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn" id="normalizeBtn" onclick="doNormalize()">
+          <span id="normBtnText" data-i18n="normaliseBtn">Analyseer &amp; Normaliseer</span>
+          <span id="normSpinner" class="spinner" style="display:none"></span>
+        </button>
+        <button class="btn btn-secondary" onclick="loadSampleUniversal()" style="font-size:13px;padding:10px 16px;">
+          <span data-i18n="loadSampleUniversal">&#128203; Laad Voorbeeld</span>
+        </button>
+      </div>
+
+      <!-- Mini progress meter for Stage 1 -->
+      <div class="progress-panel" id="normProgressPanel" style="margin-top:16px;">
+        <div class="progress-track"><div class="progress-fill" id="normProgressFill"></div></div>
+        <div class="progress-pct" id="normProgressPct">0%</div>
+        <ul class="progress-steps" id="normProgressSteps">
+          <li id="nStep0"><span class="step-icon">&#9203;</span> Email tekst verwerken...</li>
+          <li id="nStep1"><span class="step-icon">&#9203;</span> IT-assets herkennen...</li>
+          <li id="nStep2"><span class="step-icon">&#9203;</span> Normaliseren via ERPIE AI...</li>
+          <li id="nStep3"><span class="step-icon">&#9203;</span> Klaar voor verificatie!</li>
+        </ul>
+      </div>
 
       <!-- Preview panel (hidden until normalisation completes) -->
       <div class="preview-panel" id="previewPanel">
         <div class="preview-header">&#9989; <span id="previewTitle">ERPIE heeft assets herkend</span></div>
         <div class="preview-stats">
-          <div class="preview-stat"><strong id="previewAssets">0</strong> assets</div>
-          <div class="preview-stat"><strong id="previewModels">0</strong> modellen</div>
+          <div class="preview-stat"><strong id="previewAssets">0</strong> <span data-i18n="previewAssetsLabel">assets</span></div>
+          <div class="preview-stat"><strong id="previewModels">0</strong> <span data-i18n="previewModelsLabel">modellen</span></div>
           <div class="preview-stat" id="previewSourceWrap" style="font-size:11px;color:var(--text3)">via <span id="previewSource"></span></div>
         </div>
         <textarea class="preview-text" id="previewText" rows="8"></textarea>
-        <div style="font-size:12px;color:var(--text3);margin-top:6px;">Controleer de lijst hierboven. Pas aan indien nodig, druk dan op Verstuur.</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;" data-i18n="previewHint">Controleer de lijst hierboven. Pas aan indien nodig, druk dan op Verstuur.</div>
         <div class="preview-actions">
-          <button class="btn-send" onclick="sendToErpie()">&#128640; Verstuur naar ERPIE</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('previewPanel').classList.remove('visible')">Annuleren</button>
+          <button class="btn-send" onclick="sendToErpie()"><span data-i18n="sendBtn">&#128640; Verstuur naar ERPIE</span></button>
+          <button class="btn btn-secondary" onclick="document.getElementById('previewPanel').classList.remove('visible')" data-i18n="cancelBtn">Annuleren</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="stage-connector">&#9660;</div>
+  <div class="stage-connector" id="stageConnector">&#9660;</div>
 
   <!-- ═══ STAGE 2: PRICING ═══ -->
 
   <!-- Progress meter (shown during analysis) -->
   <div class="progress-panel" id="progressPanel">
-    <h3>&#9881;&#65039; ERPIE is aan het werk...</h3>
+    <h3 data-i18n="progressTitle">&#9881;&#65039; ERPIE is aan het werk...</h3>
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="progress-pct" id="progressPct">0%</div>
     <ul class="progress-steps" id="progressSteps">
-      <li id="pStep0"><span class="step-icon">&#9203;</span> Input analyseren...</li>
-      <li id="pStep1"><span class="step-icon">&#9203;</span> Assets herkennen...</li>
-      <li id="pStep2"><span class="step-icon">&#9203;</span> ERPIE pricing engine starten...</li>
-      <li id="pStep3"><span class="step-icon">&#9203;</span> Prijzen berekenen via Eureka Rule Book...</li>
-      <li id="pStep4"><span class="step-icon">&#9203;</span> Live marktprijzen ophalen (B2B + B2C)...</li>
-      <li id="pStep5"><span class="step-icon">&#9203;</span> Rapport samenstellen...</li>
-      <li id="pStep6"><span class="step-icon">&#9203;</span> Klaar!</li>
+      <li id="pStep0"><span class="step-icon">&#9203;</span> <span data-i18n="step1">Input analyseren...</span></li>
+      <li id="pStep1"><span class="step-icon">&#9203;</span> <span data-i18n="step2">Assets herkennen...</span></li>
+      <li id="pStep2"><span class="step-icon">&#9203;</span> <span data-i18n="step3">ERPIE pricing engine starten...</span></li>
+      <li id="pStep3"><span class="step-icon">&#9203;</span> <span data-i18n="step4">Prijzen berekenen via Eureka Rule Book...</span></li>
+      <li id="pStep4"><span class="step-icon">&#9203;</span> <span data-i18n="step5">Live marktprijzen ophalen (B2B + B2C)...</span></li>
+      <li id="pStep5"><span class="step-icon">&#9203;</span> <span data-i18n="step6">Rapport samenstellen...</span></li>
+      <li id="pStep6"><span class="step-icon">&#9203;</span> <span data-i18n="step7">Klaar!</span></li>
     </ul>
   </div>
 
@@ -570,11 +587,11 @@
   <div class="input-section">
     <div class="deal-row">
       <div class="field" style="flex:2">
-        <label>Deal Name</label>
-        <input type="text" id="dealName" placeholder="e.g. Cognizant Q1 2026" value="">
+        <label data-i18n="dealName">Deal Naam</label>
+        <input type="text" id="dealName" placeholder="bijv. Cognizant Q1 2026" value="">
       </div>
       <div class="field" style="flex:1">
-        <label>Region</label>
+        <label data-i18n="region">Regio</label>
         <select id="region">
           <option value="EU" selected>EU</option>
           <option value="UK">UK</option>
@@ -586,8 +603,8 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab active" data-tab="file">File Upload</button>
-      <button class="tab" data-tab="text">Text Input</button>
+      <button class="tab active" data-tab="file" data-i18n="fileUpload">Bestand Upload</button>
+      <button class="tab" data-tab="text" data-i18n="textInput">Tekst Invoer</button>
     </div>
 
     <!-- File Upload -->
@@ -613,16 +630,18 @@
     <!-- Action -->
     <div class="btn-row">
       <button class="btn" id="analyzeBtn" onclick="doAnalyze()">
-        <span id="btnText">Parse &amp; Analyse</span>
+        <span id="btnText" data-i18n="parseBtn">Verwerk &amp; Analyseer</span>
         <span id="btnSpinner" class="spinner" style="display:none"></span>
       </button>
-      <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
-      <button class="btn btn-secondary" onclick="loadSample()" style="font-size:13px;padding:10px 16px;">&#128203; Load Sample</button>
+      <button class="btn btn-secondary" onclick="resetAll()" data-i18n="resetBtn">Reset</button>
+      <button class="btn btn-secondary" onclick="loadSample()" style="font-size:13px;padding:10px 16px;">
+        <span data-i18n="loadSample">&#128203; Laad Voorbeeld</span>
+      </button>
     </div>
 
     <div class="validate-checkbox">
       <input type="checkbox" id="liveValidation">
-      <label for="liveValidation">&#128270; Validate with live prices</label>
+      <label for="liveValidation" data-i18n="validateLive">&#128270; Valideer met live prijzen</label>
     </div>
   </div>
 
@@ -677,7 +696,84 @@
   let currentFile = null;
   let analysisData = null;
   let validationData = null;
+  let currentLang = 'nl';
   const API_BASE = '';
+
+  // ─── Translations ──────────────────────────────────────
+  const translations = {
+    nl: {
+      universalTitle: "\uD83D\uDD0D Universele Input Parser",
+      universalPlaceholder: "Plak hier alles in \u2014 email tekst, tabel, PDF inhoud, Excel kopie, elke volgorde, elk formaat. ERPIE normaliseert het automatisch.",
+      universalHint: "Ondersteunt: email met handtekening, Excel/CSV plak, Blancco export, vrije tekst, genummerde lijsten, aaneengeplakte tabellen",
+      normaliseBtn: "Analyseer & Normaliseer",
+      loadSampleUniversal: "\uD83D\uDCCB Laad Voorbeeld",
+      parseBtn: "Verwerk & Analyseer",
+      resetBtn: "Reset",
+      loadSample: "\uD83D\uDCCB Laad Voorbeeld",
+      validateLive: "\uD83D\uDD0E Valideer met live prijzen",
+      progressTitle: "\u2699\uFE0F ERPIE is aan het werk...",
+      step1: "Input analyseren...",
+      step2: "Assets herkennen...",
+      step3: "ERPIE pricing engine starten...",
+      step4: "Prijzen berekenen via Eureka Rule Book...",
+      step5: "Live marktprijzen ophalen (B2B + B2C)...",
+      step6: "Rapport samenstellen...",
+      step7: "Klaar!",
+      previewAssetsLabel: "assets",
+      previewModelsLabel: "modellen",
+      previewHint: "Controleer de lijst hierboven. Pas aan indien nodig, druk dan op Verstuur.",
+      sendBtn: "\uD83D\uDE80 Verstuur naar ERPIE",
+      cancelBtn: "Annuleren",
+      dealName: "Deal Naam",
+      region: "Regio",
+      fileUpload: "Bestand Upload",
+      textInput: "Tekst Invoer",
+    },
+    en: {
+      universalTitle: "\uD83D\uDD0D Universal Input Parser",
+      universalPlaceholder: "Paste anything here \u2014 email text, table, PDF content, Excel copy, any order, any format. ERPIE normalises it automatically.",
+      universalHint: "Supports: email with signature, Excel/CSV paste, Blancco export, free text, numbered lists, concatenated tables",
+      normaliseBtn: "Analyse & Normalise",
+      loadSampleUniversal: "\uD83D\uDCCB Load Example",
+      parseBtn: "Process & Analyse",
+      resetBtn: "Reset",
+      loadSample: "\uD83D\uDCCB Load Sample",
+      validateLive: "\uD83D\uDD0E Validate with live prices",
+      progressTitle: "\u2699\uFE0F ERPIE is working...",
+      step1: "Analysing input...",
+      step2: "Recognising assets...",
+      step3: "Starting ERPIE pricing engine...",
+      step4: "Calculating prices via Eureka Rule Book...",
+      step5: "Fetching live market prices (B2B + B2C)...",
+      step6: "Assembling report...",
+      step7: "Done!",
+      previewAssetsLabel: "assets",
+      previewModelsLabel: "models",
+      previewHint: "Review the list above. Edit if needed, then press Send.",
+      sendBtn: "\uD83D\uDE80 Send to ERPIE",
+      cancelBtn: "Cancel",
+      dealName: "Deal Name",
+      region: "Region",
+      fileUpload: "File Upload",
+      textInput: "Text Input",
+    }
+  };
+
+  window.setLanguage = function(lang) {
+    currentLang = lang;
+    const t = translations[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (!t[key]) return;
+      if (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox')) {
+        el.placeholder = t[key];
+      } else {
+        el.textContent = t[key];
+      }
+    });
+    document.getElementById('flagNL').style.opacity = lang === 'nl' ? '1' : '0.4';
+    document.getElementById('flagEN').style.opacity = lang === 'en' ? '1' : '0.4';
+  };
 
   // ─── Tabs ───────────────────────────────────────────────
   document.querySelectorAll('.tab').forEach(tab => {
@@ -716,47 +812,118 @@
   });
 
   // ─── Stage 1: Normalize ──────────────────────────────────
+  function setNormProgress(pct) {
+    document.getElementById('normProgressFill').style.width = pct + '%';
+    document.getElementById('normProgressPct').textContent = Math.round(pct) + '%';
+  }
+  function markNormStep(idx, status) {
+    const el = document.getElementById('nStep' + idx);
+    if (status === 'active') {
+      el.className = 'active';
+      el.querySelector('.step-icon').innerHTML = '<span class="spinner-sm"></span>';
+    } else if (status === 'done') {
+      el.className = 'done';
+      el.querySelector('.step-icon').innerHTML = '&#9989;';
+    }
+  }
+
   window.doNormalize = async function() {
     const raw = document.getElementById('normalizeInput').value.trim();
-    if (!raw) { showError('Plak eerst tekst in het invoerveld.'); return; }
+    if (!raw) { showError(currentLang === 'nl' ? 'Plak eerst tekst in het invoerveld.' : 'Paste text first.'); return; }
 
     const btn = document.getElementById('normalizeBtn');
-    const btnText = document.getElementById('normBtnText');
-    const spinner = document.getElementById('normSpinner');
     btn.disabled = true;
-    btnText.textContent = 'Analyseren...';
-    spinner.style.display = '';
+    document.getElementById('normBtnText').textContent = currentLang === 'nl' ? 'Analyseren...' : 'Analysing...';
+    document.getElementById('normSpinner').style.display = '';
     hideError();
 
+    // Show mini progress
+    const pp = document.getElementById('normProgressPanel');
+    pp.classList.add('visible');
+    for (let i = 0; i <= 3; i++) { const el = document.getElementById('nStep'+i); el.className = ''; el.querySelector('.step-icon').innerHTML = '&#9203;'; }
+    setNormProgress(0);
+
+    // Step 0: Email tekst verwerken
+    markNormStep(0, 'active');
+    setNormProgress(10);
+
     try {
+      // Step 1: IT-assets herkennen
+      await new Promise(r => setTimeout(r, 400));
+      markNormStep(0, 'done'); markNormStep(1, 'active');
+      setNormProgress(30);
+
+      // Step 2: Normaliseren via ERPIE AI
+      await new Promise(r => setTimeout(r, 300));
+      markNormStep(1, 'done'); markNormStep(2, 'active');
+      setNormProgress(50);
+
       const resp = await fetch(API_BASE + '/api/normalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: raw }),
       });
       const data = await resp.json();
-      if (data.error) { showError(data.error); return; }
+
+      markNormStep(2, 'done');
+      setNormProgress(90);
+
+      if (data.error) { showError(data.error); pp.classList.remove('visible'); return; }
+
+      // Step 3: Klaar
+      markNormStep(3, 'done');
+      setNormProgress(100);
+      await new Promise(r => setTimeout(r, 400));
+      pp.classList.remove('visible');
 
       // Show preview panel
-      document.getElementById('previewTitle').textContent =
-        'ERPIE heeft ' + data.assetCount + ' assets herkend in ' + data.modelCount + ' modellen';
+      const titleParts = currentLang === 'nl'
+        ? 'ERPIE heeft ' + data.assetCount + ' assets herkend in ' + data.modelCount + ' modellen'
+        : 'ERPIE found ' + data.assetCount + ' assets in ' + data.modelCount + ' models';
+      document.getElementById('previewTitle').textContent = titleParts;
       document.getElementById('previewAssets').textContent = data.assetCount;
       document.getElementById('previewModels').textContent = data.modelCount;
-      document.getElementById('previewSource').textContent = data.source === 'openclaw' ? 'AI (OpenClaw)' : 'lokale parser';
+      document.getElementById('previewSource').textContent = data.source === 'openclaw' ? 'AI (OpenClaw)' : (currentLang === 'nl' ? 'lokale parser' : 'local parser');
       document.getElementById('previewText').value = data.normalised;
       document.getElementById('previewPanel').classList.add('visible');
+
+      // Pulse the connector
+      document.getElementById('stageConnector').classList.add('pulse');
     } catch (err) {
-      showError('Normalisatie mislukt: ' + err.message);
+      showError((currentLang === 'nl' ? 'Normalisatie mislukt: ' : 'Normalisation failed: ') + err.message);
+      pp.classList.remove('visible');
     } finally {
       btn.disabled = false;
-      btnText.innerHTML = '&#129504; Normaliseer &amp; Herken';
-      spinner.style.display = 'none';
+      document.getElementById('normBtnText').textContent = translations[currentLang].normaliseBtn;
+      document.getElementById('normSpinner').style.display = 'none';
     }
+  };
+
+  window.loadSampleUniversal = function() {
+    document.getElementById('normalizeInput').value = `Beste Joep,
+
+Hierbij ons aanbod voor onderstaande batch IT hardware.
+Afkomstig uit lease-retour bij een Nederlandse financi\u00eble instelling.
+
+20x Dell Latitude 5420, i5-1145G7, 16GB, 256GB SSD, Grade B
+15x HP EliteBook 840 G8, i5-1135G7, 8GB, 256GB SSD, Grade B
+10x Lenovo ThinkPad T14 Gen2, i5-1135G7, 16GB, 256GB SSD, Grade A
+5x Apple MacBook Air M1, 8GB, 256GB SSD, Grade B
+8x Dell Latitude 7420, i7-1185G7, 16GB, 512GB SSD, Grade A
+
+Totaal: 58 stuks. Conditie gemiddeld grade B.
+Ophalen in Rotterdam, week 17.
+
+Met vriendelijke groet,
+Pieter van Dalen
+DataClearance Benelux BV`;
   };
 
   window.sendToErpie = function() {
     const normalised = document.getElementById('previewText').value.trim();
     if (!normalised) return;
+    // Stop connector pulse
+    document.getElementById('stageConnector').classList.remove('pulse');
     // Switch to text tab
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
