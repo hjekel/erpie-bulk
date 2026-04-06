@@ -246,10 +246,27 @@ app.post('/api/ptolemaeus/ingest', async (req, res) => {
     const execFileAsync = promisify(execFile);
 
     console.log(`[ptolemaeus] Ingesting: ${input.slice(0, 80)}...`);
-    const { stdout, stderr } = await execFileAsync('node', ['/home/openclaw/ptolemaeus/ingest.js', input], {
-      timeout: 90_000,
-      env: { ...process.env, PATH: `${process.env.PATH}:/home/openclaw/.npm-global/bin:/home/openclaw/.local/bin:/usr/local/bin` },
-    });
+    let stdout, stderr;
+    try {
+      const result = await execFileAsync('node', ['/home/openclaw/ptolemaeus/ingest.js', input], {
+        timeout: 90_000,
+        env: { ...process.env, PATH: `${process.env.PATH}:/home/openclaw/.npm-global/bin:/home/openclaw/.local/bin:/usr/local/bin` },
+      });
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch(childErr) {
+      // ingest.js exits with code 1 on YouTube/fetch errors — check stderr for message
+      const msg = (childErr.stderr || childErr.message || '').trim();
+      if (msg.includes('Shorts') || msg.includes('transcript') || msg.includes('opgehaald')) {
+        // Structured error from ingest.js
+        const lines = msg.split('\n').filter(l => l.length > 0);
+        return res.status(400).json({
+          error: lines[0]?.replace(/^\u274C\s*/, '') || 'Ingest mislukt',
+          tip: lines[1] || '',
+        });
+      }
+      throw childErr;
+    }
     if (stderr) console.warn('[ptolemaeus] stderr:', stderr.slice(0, 200));
 
     // Re-read cards to get the new one

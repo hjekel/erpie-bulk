@@ -4,13 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bibliotheek van AI-lexandri&euml; — Ptolemaeus</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F3DB;</text></svg>">
 <style>
   :root {
     --bg: #0a0a1f; --bg2: #111128; --surface: #1a1a3e; --surface2: #1e293b;
     --border: #334155; --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
     --accent: #f59e0b; --accent2: #d97706; --go: #00c853; --nogo: #d50000;
     --radius: 12px;
+  }
+  html.light {
+    --bg: #f1f5f9; --bg2: #e2e8f0; --surface: #ffffff; --surface2: #f8fafc;
+    --border: #cbd5e1; --text: #1e293b; --text2: #475569; --text3: #94a3b8;
+    --accent: #d97706; --accent2: #b45309;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -159,7 +164,10 @@
     <h1>&#128218; Bibliotheek van AI-lexandri&euml;</h1>
     <div class="sub">Kennisbank van Incredible Projects &middot; Ptolemaeus v1.0</div>
   </div>
-  <a href="/">&larr; Terug naar ERPIE Bulk</a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">&#127769;</button>
+    <a href="/">&larr; ERPIE Bulk</a>
+  </div>
 </div>
 
 <div class="container">
@@ -252,6 +260,19 @@
   const API = '';
   let allCards = [];
 
+  // Theme toggle
+  window.toggleTheme = function() {
+    document.documentElement.classList.toggle('light');
+    const btn = document.getElementById('themeToggle');
+    btn.textContent = document.documentElement.classList.contains('light') ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    localStorage.setItem('ptolemaeus-theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+  };
+  // Restore saved theme
+  if (localStorage.getItem('ptolemaeus-theme') === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeToggle').textContent = '\u2600\uFE0F';
+  }
+
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -335,7 +356,7 @@
         body: JSON.stringify({ input })
       });
       const data = await resp.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) throw new Error(data.error + (data.tip ? '\n' + data.tip : ''));
       closeModal('ingestModal');
       document.getElementById('ingestInput').value = '';
       loadCards();
