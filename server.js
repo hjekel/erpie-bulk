@@ -298,13 +298,26 @@ app.get('/api/ptolemaeus/proposals', (req, res) => {
         pending.push({ file, title: m[1], wat: m[2], waarom: m[3], effort: m[4] });
       }
     }
-    // Parse approved actions
+    // Parse approved actions with notes/link/status
     const approved = [];
     if (fs.existsSync(ACTIONS_FILE)) {
-      const actions = fs.readFileSync(ACTIONS_FILE, 'utf8');
-      const matches = actions.matchAll(/## .+ — (.+)\n\*\*Bron:\*\* .+\n\*\*Actie:\*\* (.+)\n[\s\S]*?\*\*Status:\*\* (.+)/g);
-      for (const m of matches) {
-        approved.push({ title: m[1], action: m[2], status: m[3] });
+      const actionsContent = fs.readFileSync(ACTIONS_FILE, 'utf8');
+      const blocks = actionsContent.split(/(?=\n## \d{4}-\d{2}-\d{2} )/).slice(1);
+      for (const block of blocks) {
+        const titleM = block.match(/## .+ — (.+)/);
+        const actionM = block.match(/\*\*Actie:\*\* (.+)/);
+        const statusM = block.match(/\*\*Status:\*\* (.+)/);
+        const notesM = block.match(/\*\*Notities:\*\* (.+)/);
+        const linkM = block.match(/\*\*Link:\*\* (.+)/);
+        if (titleM) {
+          approved.push({
+            title: titleM[1],
+            action: actionM?.[1] || '',
+            status: statusM?.[1]?.trim() || 'TODO',
+            notes: notesM?.[1] || '',
+            link: linkM?.[1] || '',
+          });
+        }
       }
     }
     res.json({ pending, approved });
@@ -342,6 +355,78 @@ app.post('/api/ptolemaeus/vote', (req, res) => {
     }
 
     res.json({ success: true, newStatus });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/ptolemaeus/card/:filename — edit card title, tldr, url, notes
+app.patch('/api/ptolemaeus/card/:filename', (req, res) => {
+  try {
+    const fs = require('fs');
+    const filepath = path.join(PTOLEMAEUS_DIR, req.params.filename);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Not found' });
+
+    let content = fs.readFileSync(filepath, 'utf8');
+    const { title, tldr, url, notes } = req.body;
+
+    if (title) {
+      content = content.replace(/^# .+$/m, `# ${title}`);
+    }
+    if (tldr !== undefined) {
+      content = content.replace(/(## TL;DR\n)[\s\S]*?(?=\n##)/, `$1${tldr}`);
+    }
+    if (url) {
+      content = content.replace(/(\*\*Bron:\*\* ).+$/m, `$1${url}`);
+    }
+    if (notes) {
+      // Append notes section if not exists, or update
+      if (content.includes('## Notities')) {
+        content = content.replace(/(## Notities\n)[\s\S]*?(?=\n##|$)/, `$1${notes}\n`);
+      } else {
+        content += `\n\n## Notities\n${notes}\n`;
+      }
+    }
+
+    fs.writeFileSync(filepath, content, 'utf8');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/ptolemaeus/action — update approved action fields
+app.patch('/api/ptolemaeus/action', (req, res) => {
+  try {
+    const fs = require('fs');
+    const { index, field, value } = req.body;
+    if (!fs.existsSync(ACTIONS_FILE)) return res.status(404).json({ error: 'No actions file' });
+
+    let content = fs.readFileSync(ACTIONS_FILE, 'utf8');
+    // Split into action blocks
+    const blocks = content.split(/(?=\n## \d{4}-\d{2}-\d{2} )/);
+    const header = blocks[0]; // "# Goedgekeurde Acties\n"
+    const actions = blocks.slice(1);
+
+    if (index < 0 || index >= actions.length) return res.status(400).json({ error: 'Invalid index' });
+
+    let block = actions[index];
+
+    if (field === 'status') {
+      block = block.replace(/(\*\*Status:\*\*) .+/, `$1 ${value}`);
+    } else if (field === 'notes') {
+      if (block.includes('**Notities:**')) {
+        block = block.replace(/(\*\*Notities:\*\*) .+/, `$1 ${value}`);
+      } else {
+        block = block.trimEnd() + `\n**Notities:** ${value}\n`;
+      }
+    } else if (field === 'link') {
+      if (block.includes('**Link:**')) {
+        block = block.replace(/(\*\*Link:\*\*) .+/, `$1 ${value}`);
+      } else {
+        block = block.trimEnd() + `\n**Link:** ${value}\n`;
+      }
+    }
+
+    actions[index] = block;
+    fs.writeFileSync(ACTIONS_FILE, header + actions.join(''), 'utf8');
+    res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
