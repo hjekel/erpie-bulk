@@ -162,6 +162,39 @@ app.post('/api/normalize', async (req, res) => {
   }
 });
 
+// POST /api/quote — single device price quote (used by OpenClaw/Telegram bot)
+app.post('/api/quote', (req, res) => {
+  try {
+    const { brand, model, cpu, ram, ssd, grade, qty, region, battery } = req.body || {};
+    if (!model) return res.status(400).json({ error: 'model is required' });
+    const result = calculatePrice({
+      model: brand ? `${brand} ${model}` : model,
+      cpu: cpu || '',
+      ram: ram || '8GB',
+      ssd: ssd || '256GB',
+      grade: grade || 'B',
+      qty: qty || 1,
+      region: region || 'EU',
+      battery: battery || 'good',
+    });
+    res.json({
+      ok: true,
+      model: result.model,
+      gen: result.gen,
+      status: result.status,
+      erpPerUnit: result.advisedPrice,
+      priceLow: result.priceLow,
+      priceHigh: result.priceHigh,
+      grade: result.grade,
+      qty: result.qty,
+      reasoning: result.reasoning,
+    });
+  } catch (e) {
+    console.error('[quote] Error:', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // POST /api/export-excel — generate ARS Excel
 app.post('/api/export-excel', async (req, res) => {
   try {
