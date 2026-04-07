@@ -153,6 +153,29 @@
   .leader-info .search-terms { font-size: 12px; color: var(--text3); }
   .leader-info .last-scan { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
+  /* Help panel */
+  .help-overlay {
+    display: none; position: fixed; inset: 0; background: #0008; z-index: 200;
+  }
+  .help-overlay.visible { display: block; }
+  .help-panel {
+    position: fixed; top: 0; right: -420px; width: 400px; max-width: 90vw;
+    height: 100vh; background: var(--surface); border-left: 2px solid var(--accent)44;
+    z-index: 201; padding: 28px 24px; overflow-y: auto;
+    transition: right .3s ease;
+  }
+  .help-panel.visible { right: 0; }
+  .help-panel h2 { font-size: 18px; color: var(--accent); margin-bottom: 20px; }
+  .help-panel h3 { font-size: 15px; color: var(--text); margin: 18px 0 6px; }
+  .help-panel p, .help-panel li { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .help-panel ul { padding-left: 18px; margin-bottom: 8px; }
+  .help-panel .tip { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 4px; }
+  .help-close {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    color: var(--text3); font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .help-close:hover { color: var(--text); }
+
   @media (max-width: 768px) {
     .header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
     .container { padding: 16px 12px; }
@@ -171,6 +194,7 @@
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">&#127769;</button>
+    <button onclick="toggleHelp()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Help">&#10067;</button>
     <a href="/">&larr; ERPIE Bulk</a>
   </div>
 </div>
@@ -268,6 +292,38 @@
   </div>
 </div>
 
+<!-- Help Panel -->
+<div class="help-overlay" id="helpOverlay" onclick="toggleHelp()"></div>
+<div class="help-panel" id="helpPanel">
+  <button class="help-close" onclick="toggleHelp()">&times;</button>
+  <h2>Hoe werkt Ptolemaeus?</h2>
+
+  <h3>&#128214; Bibliotheek</h3>
+  <p>Alle inzichten als kaarten. Klik een kaart om de volledige inhoud te zien. Gebruik de zoekbalk om te filteren.</p>
+  <p>&#9998; Klik de potlood-knop om een kaart te bewerken.</p>
+
+  <h3>&#128499;&#65039; Idee&euml;nBus</h3>
+  <p>Nieuwe inzichten genereren automatisch voorstellen.</p>
+  <ul>
+    <li><strong>Goedkeuren</strong> &rarr; voorstel wordt een TODO actie</li>
+    <li><strong>Afwijzen</strong> &rarr; voorstel vervalt</li>
+    <li><strong>Later</strong> &rarr; voorstel blijft staan voor later</li>
+  </ul>
+  <p>Goedgekeurde acties kun je bijhouden met:</p>
+  <ul>
+    <li><strong>Status:</strong> TODO / IN PROGRESS / DONE</li>
+    <li><strong>Notities:</strong> implementatie-aantekeningen</li>
+    <li><strong>Link:</strong> GitHub commit of Claude Code sessie URL</li>
+  </ul>
+
+  <h3>&#128101; Thought Leaders</h3>
+  <p>Bronnen die de radar automatisch scant (ma + do 08:00). Klik &ldquo;Handmatige scan&rdquo; om direct een scan te starten.</p>
+
+  <h3>&#10133; Nieuw inzicht</h3>
+  <p>Plak een YouTube URL, artikel URL, of platte tekst. Ptolemaeus maakt een gestructureerde kenniskaart.</p>
+  <p class="tip">Tip: YouTube Shorts hebben vaak geen transcript &mdash; gebruik dan NotebookLM om eerst een samenvatting te maken.</p>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -275,6 +331,20 @@
   let allCards = [];
   let currentDetailFile = null;
   let currentDetailContent = '';
+
+  // Help panel toggle with localStorage persistence
+  window.toggleHelp = function() {
+    const panel = document.getElementById('helpPanel');
+    const overlay = document.getElementById('helpOverlay');
+    const isOpen = panel.classList.contains('visible');
+    panel.classList.toggle('visible');
+    overlay.classList.toggle('visible');
+    localStorage.setItem('ptolemaeus-help', isOpen ? 'closed' : 'open');
+  };
+  if (localStorage.getItem('ptolemaeus-help') === 'open') {
+    document.getElementById('helpPanel').classList.add('visible');
+    document.getElementById('helpOverlay').classList.add('visible');
+  }
 
   window.toggleTheme = function() {
     document.documentElement.classList.toggle('light');
