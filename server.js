@@ -18,7 +18,7 @@ const { generateHTMLReport } = require('./lib/html-report');
 let pdfParse, mammoth;
 try { pdfParse = require('pdf-parse'); } catch (e) { console.warn('[startup] pdf-parse not installed — PDF upload disabled'); }
 try { mammoth = require('mammoth'); } catch (e) { console.warn('[startup] mammoth not installed — DOCX upload disabled'); }
-const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing } = require('./lib/openclaw-pricing');
+const { priceViaOpenClaw, mapOpenClawResults, groupDevicesForPricing, normalizeViaOpenClaw } = require('./lib/openclaw-pricing');
 
 // Multer for file upload
 const multer = require('multer');
@@ -119,6 +119,49 @@ app.post('/api/analyze-text', async (req, res) => {
   }
 });
 
+// POST /api/normalize — AI normalisation (Stage 1 of two-stage rocket)
+app.post('/api/normalize', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: 'No text provided' });
+
+    // Try OpenClaw AI normalisation first
+    const aiResult = await normalizeViaOpenClaw(text);
+    if (aiResult) {
+      return res.json(aiResult);
+    }
+
+    // Fallback: use local parser and format output as standard lines
+    console.log('[normalize] OpenClaw unavailable, falling back to local parser');
+    const parsed = parseText(text);
+    const devices = parsed.devices || [];
+
+    if (!devices.length) {
+      return res.status(400).json({ error: 'Geen apparaten herkend in de tekst.' });
+    }
+
+    const lines = devices.map(d => {
+      const parts = [d.model];
+      if (d.cpu) parts.push(d.cpu);
+      if (d.ram) parts.push(typeof d.ram === 'number' ? d.ram + 'GB' : d.ram);
+      if (d.ssd) parts.push(typeof d.ssd === 'number' ? d.ssd + 'GB' : d.ssd);
+      parts.push('Grade ' + (d.grade || 'B'));
+      return `${d.qty || 1}x ${parts.join(' \u00b7 ')}`;
+    });
+
+    const assetCount = devices.reduce((s, d) => s + (d.qty || 1), 0);
+    res.json({
+      normalised: lines.join('\n'),
+      assetCount,
+      modelCount: devices.length,
+      source: 'local',
+    });
+  } catch (e) {
+    console.error('[normalize] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/export-excel — generate ARS Excel
 app.post('/api/export-excel', async (req, res) => {
   try {
@@ -150,6 +193,291 @@ app.post('/api/export-html', (req, res) => {
   }
 });
 
+// ═══ PTOLEMAEUS — Knowledge Library API ═══════════════════════════════════════
+const PTOLEMAEUS_DIR = '/home/openclaw/.openclaw/workspace/PTOLEMAEUS';
+const LEADERS_FILE = path.join(PTOLEMAEUS_DIR, 'THOUGHT_LEADERS.md');
+const ACTIONS_FILE = path.join(PTOLEMAEUS_DIR, 'APPROVED_ACTIONS.md');
+
+// Helper: parse card metadata from markdown
+function parseCardMeta(filename, content) {
+  const title = content.match(/^# (.+)$/m)?.[1] || filename;
+  const date = content.match(/\*\*Datum:\*\* (.+)$/m)?.[1] || filename.slice(0, 10);
+  const type = content.match(/\*\*Type:\*\* (.+)$/m)?.[1] || 'Tekst';
+  const tldr = content.match(/## TL;DR\n([\s\S]*?)(?=\n##)/)?.[1]?.trim() || '';
+  const proposals = (content.match(/\*\*Status:\*\* PENDING/g) || []).length;
+  return { filename, title, date, type, tldr, proposals };
+}
+
+// GET /api/ptolemaeus/cards
+app.get('/api/ptolemaeus/cards', (req, res) => {
+  try {
+    const fs = require('fs');
+    if (!fs.existsSync(PTOLEMAEUS_DIR)) return res.json({ cards: [] });
+    const files = fs.readdirSync(PTOLEMAEUS_DIR)
+      .filter(f => f.endsWith('.md') && f !== 'APPROVED_ACTIONS.md' && f !== 'THOUGHT_LEADERS.md')
+      .sort().reverse();
+    const cards = files.map(f => {
+      const content = fs.readFileSync(path.join(PTOLEMAEUS_DIR, f), 'utf8');
+      return parseCardMeta(f, content);
+    });
+    res.json({ cards });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/ptolemaeus/card/:filename
+app.get('/api/ptolemaeus/card/:filename', (req, res) => {
+  try {
+    const fs = require('fs');
+    const filepath = path.join(PTOLEMAEUS_DIR, req.params.filename);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Not found' });
+    const content = fs.readFileSync(filepath, 'utf8');
+    res.json({ content, ...parseCardMeta(req.params.filename, content) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/ptolemaeus/ingest
+app.post('/api/ptolemaeus/ingest', async (req, res) => {
+  try {
+    const { input } = req.body;
+    if (!input) return res.status(400).json({ error: 'No input provided' });
+
+    const { execFile } = require('child_process');
+    const { promisify } = require('util');
+    const execFileAsync = promisify(execFile);
+
+    console.log(`[ptolemaeus] Ingesting: ${input.slice(0, 80)}...`);
+    let stdout, stderr;
+    try {
+      const result = await execFileAsync('node', ['/home/openclaw/ptolemaeus/ingest.js', input], {
+        timeout: 90_000,
+        env: { ...process.env, PATH: `${process.env.PATH}:/home/openclaw/.npm-global/bin:/home/openclaw/.local/bin:/usr/local/bin` },
+      });
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch(childErr) {
+      // ingest.js exits with code 1 on YouTube/fetch errors — check stderr for message
+      const msg = (childErr.stderr || childErr.message || '').trim();
+      if (msg.includes('Shorts') || msg.includes('transcript') || msg.includes('opgehaald')) {
+        // Structured error from ingest.js
+        const lines = msg.split('\n').filter(l => l.length > 0);
+        return res.status(400).json({
+          error: lines[0]?.replace(/^\u274C\s*/, '') || 'Ingest mislukt',
+          tip: lines[1] || '',
+        });
+      }
+      throw childErr;
+    }
+    if (stderr) console.warn('[ptolemaeus] stderr:', stderr.slice(0, 200));
+
+    // Re-read cards to get the new one
+    const fs = require('fs');
+    const files = fs.readdirSync(PTOLEMAEUS_DIR).filter(f => f.endsWith('.md') && f !== 'APPROVED_ACTIONS.md' && f !== 'THOUGHT_LEADERS.md').sort().reverse();
+    const latest = files[0];
+    if (latest) {
+      const content = fs.readFileSync(path.join(PTOLEMAEUS_DIR, latest), 'utf8');
+      return res.json({ success: true, ...parseCardMeta(latest, content) });
+    }
+    res.json({ success: true, message: 'Ingested' });
+  } catch(e) {
+    console.error('[ptolemaeus] Ingest error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/ptolemaeus/proposals
+app.get('/api/ptolemaeus/proposals', (req, res) => {
+  try {
+    const fs = require('fs');
+    if (!fs.existsSync(PTOLEMAEUS_DIR)) return res.json({ pending: [], approved: [] });
+    const files = fs.readdirSync(PTOLEMAEUS_DIR).filter(f => f.endsWith('.md') && f !== 'APPROVED_ACTIONS.md' && f !== 'THOUGHT_LEADERS.md');
+    const pending = [];
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(PTOLEMAEUS_DIR, file), 'utf8');
+      const matches = content.matchAll(/### (Voorstel \d+: .+)\n\*\*Wat:\*\* (.+)\n\*\*Waarom:\*\* (.+)\n\*\*Effort:\*\* (.+)\n\*\*Status:\*\* PENDING/g);
+      for (const m of matches) {
+        pending.push({ file, title: m[1], wat: m[2], waarom: m[3], effort: m[4] });
+      }
+    }
+    // Parse approved actions with notes/link/status
+    const approved = [];
+    if (fs.existsSync(ACTIONS_FILE)) {
+      const actionsContent = fs.readFileSync(ACTIONS_FILE, 'utf8');
+      const blocks = actionsContent.split(/(?=\n## \d{4}-\d{2}-\d{2} )/).slice(1);
+      for (const block of blocks) {
+        const titleM = block.match(/## .+ — (.+)/);
+        const actionM = block.match(/\*\*Actie:\*\* (.+)/);
+        const statusM = block.match(/\*\*Status:\*\* (.+)/);
+        const notesM = block.match(/\*\*Notities:\*\* (.+)/);
+        const linkM = block.match(/\*\*Link:\*\* (.+)/);
+        if (titleM) {
+          approved.push({
+            title: titleM[1],
+            action: actionM?.[1] || '',
+            status: statusM?.[1]?.trim() || 'TODO',
+            notes: notesM?.[1] || '',
+            link: linkM?.[1] || '',
+          });
+        }
+      }
+    }
+    res.json({ pending, approved });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/ptolemaeus/vote
+app.post('/api/ptolemaeus/vote', (req, res) => {
+  try {
+    const fs = require('fs');
+    const { file, title, vote } = req.body;
+    const filepath = path.join(PTOLEMAEUS_DIR, file);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'File not found' });
+
+    let content = fs.readFileSync(filepath, 'utf8');
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const statusMap = { approve: 'APPROVED', reject: 'REJECTED', defer: 'DEFERRED' };
+    const newStatus = statusMap[vote] || 'DEFERRED';
+
+    content = content.replace(
+      new RegExp(`(### ${escaped}[\\s\\S]*?\\*\\*Status:\\*\\*) PENDING`),
+      `$1 ${newStatus}`
+    );
+    fs.writeFileSync(filepath, content, 'utf8');
+
+    // If approved, append to actions file
+    if (vote === 'approve') {
+      const watMatch = content.match(new RegExp(`### ${escaped}[\\s\\S]*?\\*\\*Wat:\\*\\* (.+)`));
+      const waaromMatch = content.match(new RegExp(`### ${escaped}[\\s\\S]*?\\*\\*Waarom:\\*\\* (.+)`));
+      const effortMatch = content.match(new RegExp(`### ${escaped}[\\s\\S]*?\\*\\*Effort:\\*\\* (.+)`));
+      const today = new Date().toISOString().slice(0, 10);
+      const entry = `\n## ${today} — ${title}\n**Bron:** ${file}\n**Actie:** ${watMatch?.[1] || ''}\n**Motivatie:** ${waaromMatch?.[1] || ''}\n**Effort:** ${effortMatch?.[1] || ''}\n**Assignee:** Claude Code\n**Status:** TODO\n`;
+      if (!fs.existsSync(ACTIONS_FILE)) fs.writeFileSync(ACTIONS_FILE, '# Goedgekeurde Acties\n');
+      fs.appendFileSync(ACTIONS_FILE, entry);
+    }
+
+    res.json({ success: true, newStatus });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/ptolemaeus/card/:filename — edit card title, tldr, url, notes
+app.patch('/api/ptolemaeus/card/:filename', (req, res) => {
+  try {
+    const fs = require('fs');
+    const filepath = path.join(PTOLEMAEUS_DIR, req.params.filename);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Not found' });
+
+    let content = fs.readFileSync(filepath, 'utf8');
+    const { title, tldr, url, notes } = req.body;
+
+    if (title) {
+      content = content.replace(/^# .+$/m, `# ${title}`);
+    }
+    if (tldr !== undefined) {
+      content = content.replace(/(## TL;DR\n)[\s\S]*?(?=\n##)/, `$1${tldr}`);
+    }
+    if (url) {
+      content = content.replace(/(\*\*Bron:\*\* ).+$/m, `$1${url}`);
+    }
+    if (notes) {
+      // Append notes section if not exists, or update
+      if (content.includes('## Notities')) {
+        content = content.replace(/(## Notities\n)[\s\S]*?(?=\n##|$)/, `$1${notes}\n`);
+      } else {
+        content += `\n\n## Notities\n${notes}\n`;
+      }
+    }
+
+    fs.writeFileSync(filepath, content, 'utf8');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/ptolemaeus/action — update approved action fields
+app.patch('/api/ptolemaeus/action', (req, res) => {
+  try {
+    const fs = require('fs');
+    const { index, field, value } = req.body;
+    if (!fs.existsSync(ACTIONS_FILE)) return res.status(404).json({ error: 'No actions file' });
+
+    let content = fs.readFileSync(ACTIONS_FILE, 'utf8');
+    // Split into action blocks
+    const blocks = content.split(/(?=\n## \d{4}-\d{2}-\d{2} )/);
+    const header = blocks[0]; // "# Goedgekeurde Acties\n"
+    const actions = blocks.slice(1);
+
+    if (index < 0 || index >= actions.length) return res.status(400).json({ error: 'Invalid index' });
+
+    let block = actions[index];
+
+    if (field === 'status') {
+      block = block.replace(/(\*\*Status:\*\*) .+/, `$1 ${value}`);
+    } else if (field === 'notes') {
+      if (block.includes('**Notities:**')) {
+        block = block.replace(/(\*\*Notities:\*\*) .+/, `$1 ${value}`);
+      } else {
+        block = block.trimEnd() + `\n**Notities:** ${value}\n`;
+      }
+    } else if (field === 'link') {
+      if (block.includes('**Link:**')) {
+        block = block.replace(/(\*\*Link:\*\*) .+/, `$1 ${value}`);
+      } else {
+        block = block.trimEnd() + `\n**Link:** ${value}\n`;
+      }
+    }
+
+    actions[index] = block;
+    fs.writeFileSync(ACTIONS_FILE, header + actions.join(''), 'utf8');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/ptolemaeus/leaders
+app.get('/api/ptolemaeus/leaders', (req, res) => {
+  try {
+    const fs = require('fs');
+    if (!fs.existsSync(LEADERS_FILE)) return res.json({ leaders: [] });
+    const content = fs.readFileSync(LEADERS_FILE, 'utf8');
+    const leaders = [];
+    const matches = content.matchAll(/^- (.+?) \(search: "(.+?)"\)$/gm);
+    for (const m of matches) {
+      leaders.push({ name: m[1], search: m[2], lastScan: null });
+    }
+    // Check radar state for last scan dates
+    const stateFile = path.join(PTOLEMAEUS_DIR, 'RADAR_STATE.json');
+    if (fs.existsSync(stateFile)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+        for (const l of leaders) {
+          if (state[l.name]) l.lastScan = state[l.name].lastScan;
+        }
+      } catch(e) {}
+    }
+    res.json({ leaders });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/ptolemaeus/leaders — add a thought leader
+app.post('/api/ptolemaeus/leaders', (req, res) => {
+  try {
+    const fs = require('fs');
+    const { name, search } = req.body;
+    if (!name || !search) return res.status(400).json({ error: 'Name and search required' });
+    if (!fs.existsSync(PTOLEMAEUS_DIR)) fs.mkdirSync(PTOLEMAEUS_DIR, { recursive: true });
+    const line = `- ${name} (search: "${search}")\n`;
+    if (!fs.existsSync(LEADERS_FILE)) {
+      fs.writeFileSync(LEADERS_FILE, '## Thought Leaders\n' + line);
+    } else {
+      fs.appendFileSync(LEADERS_FILE, line);
+    }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /ptolemaeus — serve the library page
+app.get('/ptolemaeus', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ptolemaeus.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`🦞 ERPIE Bulk running at http://localhost:${PORT}`);
+  console.log(`📚 Ptolemaeus Library at http://localhost:${PORT}/ptolemaeus`);
 });

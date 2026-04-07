@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bibliotheek van AI-lexandri&euml; &mdash; Ptolemaeus</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F3DB;</text></svg>">
+<style>
+  :root {
+    --bg: #0a0a1f; --bg2: #111128; --surface: #1a1a3e; --surface2: #1e293b;
+    --border: #334155; --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --accent: #f59e0b; --accent2: #d97706; --go: #00c853; --nogo: #d50000;
+    --radius: 12px;
+  }
+  html.light {
+    --bg: #f1f5f9; --bg2: #e2e8f0; --surface: #ffffff; --surface2: #f8fafc;
+    --border: #cbd5e1; --text: #1e293b; --text2: #475569; --text3: #94a3b8;
+    --accent: #d97706; --accent2: #b45309;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, var(--bg) 0%, var(--surface) 50%, #0d1b2a 100%);
+    padding: 28px 32px; border-bottom: 2px solid var(--accent)33;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+  .header .sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .header a { color: var(--text3); text-decoration: none; font-size: 13px; }
+  .header a:hover { color: var(--accent); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+  .tab {
+    padding: 10px 24px; cursor: pointer; font-size: 14px; font-weight: 600;
+    color: var(--text3); border: none; background: none;
+    border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .badge {
+    background: var(--accent); color: #000; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 999px; margin-left: 6px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .toolbar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; }
+  .search-input {
+    flex: 1; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 14px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 10px 20px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000; font-weight: 700; font-size: 13px; border: none; border-radius: 8px;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent)44; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); box-shadow: none; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+  .btn-go { background: linear-gradient(135deg, var(--go), #00a844); color: #fff; }
+  .btn-no { background: linear-gradient(135deg, var(--nogo), #b50000); color: #fff; }
+  .btn-defer { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #00000033; border-top-color: #000; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; cursor: pointer; transition: all .2s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .card-type { font-size: 18px; }
+  .card-date { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+  .card-tldr { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 10px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-footer { display: flex; gap: 8px; align-items: center; }
+  .card-badge {
+    font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+    background: var(--accent)20; color: var(--accent); border: 1px solid var(--accent)44;
+  }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: #000c; z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.visible { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 18px; color: var(--accent); margin-bottom: 16px; }
+  .modal textarea, .modal input[type=text], .modal select {
+    width: 100%; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px; outline: none; resize: vertical;
+  }
+  .modal textarea:focus, .modal input:focus { border-color: var(--accent); }
+  .modal .btn-row { display: flex; gap: 12px; margin-top: 16px; }
+  .modal label { font-size: 11px; color: var(--text3); display: block; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .05em; }
+
+  .card-detail { font-size: 14px; line-height: 1.7; color: var(--text2); }
+  .card-detail h1 { font-size: 20px; color: var(--accent); margin-bottom: 8px; }
+  .card-detail h2 { font-size: 16px; color: var(--text); margin: 20px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .card-detail h3 { font-size: 14px; color: var(--accent); margin: 14px 0 6px; }
+  .card-detail p { margin-bottom: 8px; }
+  .card-detail strong { color: var(--text); }
+  .card-detail ul, .card-detail ol { padding-left: 20px; margin-bottom: 8px; }
+
+  .yt-embed { margin: 16px 0; border-radius: var(--radius); overflow: hidden; }
+  .yt-embed iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: var(--radius); }
+  .yt-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #ff000018; border: 1px solid #ff000044; border-radius: 8px; color: #ff4444; font-size: 13px; font-weight: 600; text-decoration: none; margin: 12px 0; }
+  .yt-link:hover { background: #ff000028; }
+
+  .proposal-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 12px;
+  }
+  .proposal-item h3 { font-size: 14px; color: var(--text); margin-bottom: 6px; }
+  .proposal-meta { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .proposal-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .effort-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    display: inline-block; margin-left: 8px;
+  }
+  .effort-Laag { background: #00c85320; color: #00c853; border: 1px solid #00c853; }
+  .effort-Medium { background: #ffab0020; color: #ffab00; border: 1px solid #ffab00; }
+  .effort-Hoog { background: #d5000020; color: #d50000; border: 1px solid #d50000; }
+
+  .proposal-notes { margin-top: 10px; }
+  .proposal-notes textarea { min-height: 50px; font-size: 12px; }
+  .proposal-notes select { width: auto; display: inline-block; padding: 4px 8px; font-size: 12px; }
+  .proposal-notes input[type=text] { font-size: 12px; }
+
+  .approved-section { margin-top: 32px; }
+  .approved-section h2 { font-size: 16px; color: var(--go); margin-bottom: 12px; }
+
+  .leader-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .leader-info h3 { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .leader-info .search-terms { font-size: 12px; color: var(--text3); }
+  .leader-info .last-scan { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Help panel */
+  .help-overlay {
+    display: none; position: fixed; inset: 0; background: #0008; z-index: 200;
+  }
+  .help-overlay.visible { display: block; }
+  .help-panel {
+    position: fixed; top: 0; right: -420px; width: 400px; max-width: 90vw;
+    height: 100vh; background: var(--surface); border-left: 2px solid var(--accent)44;
+    z-index: 201; padding: 28px 24px; overflow-y: auto;
+    transition: right .3s ease;
+  }
+  .help-panel.visible { right: 0; }
+  .help-panel h2 { font-size: 18px; color: var(--accent); margin-bottom: 20px; }
+  .help-panel h3 { font-size: 15px; color: var(--text); margin: 18px 0 6px; }
+  .help-panel p, .help-panel li { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .help-panel ul { padding-left: 18px; margin-bottom: 8px; }
+  .help-panel .tip { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 4px; }
+  .help-close {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    color: var(--text3); font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .help-close:hover { color: var(--text); }
+
+  @media (max-width: 768px) {
+    .header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
+    .container { padding: 16px 12px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .toolbar { flex-direction: column; }
+    .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>&#128218; Bibliotheek van AI-lexandri&euml;</h1>
+    <div class="sub">Kennisbank van Incredible Projects &middot; Ptolemaeus v1.1</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button id="themeToggle" onclick="toggleTheme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Toggle light/dark mode">&#127769;</button>
+    <button onclick="toggleHelp()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:999px;cursor:pointer;font-size:16px;" title="Help">&#10067;</button>
+    <a href="/">&larr; ERPIE Bulk</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="library">&#128214; Bibliotheek</button>
+    <button class="tab" data-tab="ideeen">&#128499;&#65039; Idee&euml;nBus <span class="badge" id="pendingBadge" style="display:none">0</span></button>
+    <button class="tab" data-tab="leaders">&#128225; Thought Leaders</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-library">
+    <div class="toolbar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Zoek in inzichten..." oninput="filterCards()">
+      <button class="btn" onclick="showIngestModal()">&#10133; Nieuw inzicht</button>
+    </div>
+    <div id="cardsGrid" class="cards-grid">
+      <div class="empty-state"><div class="icon">&#128218;</div><p>Nog geen inzichten. Voeg er een toe!</p></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-ideeen">
+    <h2 style="font-size:18px;margin-bottom:16px;">Openstaande Voorstellen</h2>
+    <div id="proposalsList"></div>
+    <div class="approved-section">
+      <h2>&#9989; Goedgekeurde Acties</h2>
+      <div id="approvedList"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-leaders">
+    <div class="toolbar">
+      <div style="flex:1"></div>
+      <button class="btn" onclick="showLeaderModal()">&#10133; Thought Leader toevoegen</button>
+    </div>
+    <div id="leadersList"></div>
+  </div>
+</div>
+
+<!-- Ingest Modal -->
+<div class="modal-backdrop" id="ingestModal">
+  <div class="modal">
+    <h2>&#10133; Nieuw Inzicht</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Plak een YouTube URL, artikel URL, of tekst. Ptolemaeus analyseert het en maakt een inzicht.</p>
+    <textarea id="ingestInput" rows="6" placeholder="https://youtu.be/... of https://... of plak tekst hier"></textarea>
+    <div class="btn-row">
+      <button class="btn" id="ingestBtn" onclick="doIngest()">
+        <span id="ingestBtnText">&#128218; Analyseer &amp; Opslaan</span>
+        <span id="ingestSpinner" class="spinner" style="display:none"></span>
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('ingestModal')">Annuleren</button>
+    </div>
+    <div id="ingestError" style="color:var(--nogo);font-size:13px;margin-top:10px;display:none;white-space:pre-line"></div>
+  </div>
+</div>
+
+<!-- Card Detail Modal -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal" style="max-width:900px;">
+    <div class="card-detail" id="detailContent"></div>
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-secondary" id="editCardBtn" onclick="toggleEditCard()">&#9998; Bewerken</button>
+      <button class="btn btn-secondary" onclick="closeModal('detailModal')">Sluiten</button>
+    </div>
+    <!-- Edit panel (hidden) -->
+    <div id="editPanel" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <label>Titel</label>
+      <input type="text" id="editTitle">
+      <label>TL;DR</label>
+      <textarea id="editTldr" rows="3"></textarea>
+      <label>Notities</label>
+      <textarea id="editNotes" rows="3" placeholder="Vrije notities..."></textarea>
+      <label>Bron URL</label>
+      <input type="text" id="editUrl" placeholder="https://...">
+      <div class="btn-row">
+        <button class="btn" onclick="saveCardEdit()">Opslaan</button>
+        <button class="btn btn-secondary" onclick="toggleEditCard()">Annuleren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leader Modal -->
+<div class="modal-backdrop" id="leaderModal">
+  <div class="modal" style="max-width:500px;">
+    <h2>&#10133; Thought Leader Toevoegen</h2>
+    <label>Naam</label>
+    <input type="text" id="leaderName" placeholder="bijv. Matt Berman">
+    <label>Zoektermen</label>
+    <input type="text" id="leaderSearch" placeholder="bijv. matt berman AI agents 2026">
+    <div class="btn-row">
+      <button class="btn" onclick="addLeader()">Toevoegen</button>
+      <button class="btn btn-secondary" onclick="closeModal('leaderModal')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help Panel -->
+<div class="help-overlay" id="helpOverlay" onclick="toggleHelp()"></div>
+<div class="help-panel" id="helpPanel">
+  <button class="help-close" onclick="toggleHelp()">&times;</button>
+  <h2>Hoe werkt Ptolemaeus?</h2>
+
+  <h3>&#128214; Bibliotheek</h3>
+  <p>Alle inzichten als kaarten. Klik een kaart om de volledige inhoud te zien. Gebruik de zoekbalk om te filteren.</p>
+  <p>&#9998; Klik de potlood-knop om een kaart te bewerken.</p>
+
+  <h3>&#128499;&#65039; Idee&euml;nBus</h3>
+  <p>Nieuwe inzichten genereren automatisch voorstellen.</p>
+  <ul>
+    <li><strong>Goedkeuren</strong> &rarr; voorstel wordt een TODO actie</li>
+    <li><strong>Afwijzen</strong> &rarr; voorstel vervalt</li>
+    <li><strong>Later</strong> &rarr; voorstel blijft staan voor later</li>
+  </ul>
+  <p>Goedgekeurde acties kun je bijhouden met:</p>
+  <ul>
+    <li><strong>Status:</strong> TODO / IN PROGRESS / DONE</li>
+    <li><strong>Notities:</strong> implementatie-aantekeningen</li>
+    <li><strong>Link:</strong> GitHub commit of Claude Code sessie URL</li>
+  </ul>
+
+  <h3>&#128101; Thought Leaders</h3>
+  <p>Bronnen die de radar automatisch scant (ma + do 08:00). Klik &ldquo;Handmatige scan&rdquo; om direct een scan te starten.</p>
+
+  <h3>&#10133; Nieuw inzicht</h3>
+  <p>Plak een YouTube URL, artikel URL, of platte tekst. Ptolemaeus maakt een gestructureerde kenniskaart.</p>
+  <p class="tip">Tip: YouTube Shorts hebben vaak geen transcript &mdash; gebruik dan NotebookLM om eerst een samenvatting te maken.</p>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  const API = '';
+  let allCards = [];
+  let currentDetailFile = null;
+  let currentDetailContent = '';
+
+  // Help panel toggle with localStorage persistence
+  window.toggleHelp = function() {
+    const panel = document.getElementById('helpPanel');
+    const overlay = document.getElementById('helpOverlay');
+    const isOpen = panel.classList.contains('visible');
+    panel.classList.toggle('visible');
+    overlay.classList.toggle('visible');
+    localStorage.setItem('ptolemaeus-help', isOpen ? 'closed' : 'open');
+  };
+  if (localStorage.getItem('ptolemaeus-help') === 'open') {
+    document.getElementById('helpPanel').classList.add('visible');
+    document.getElementById('helpOverlay').classList.add('visible');
+  }
+
+  window.toggleTheme = function() {
+    document.documentElement.classList.toggle('light');
+    const btn = document.getElementById('themeToggle');
+    btn.textContent = document.documentElement.classList.contains('light') ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    localStorage.setItem('ptolemaeus-theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+  };
+  if (localStorage.getItem('ptolemaeus-theme') === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeToggle').textContent = '\u2600\uFE0F';
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  loadCards();
+  loadProposals();
+  loadLeaders();
+
+  async function loadCards() {
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/cards');
+      const data = await resp.json();
+      allCards = data.cards || [];
+      renderCards(allCards);
+    } catch(e) { console.error('Failed to load cards:', e); }
+  }
+
+  function renderCards(cards) {
+    const grid = document.getElementById('cardsGrid');
+    if (!cards.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="icon">&#128218;</div><p>Nog geen inzichten. Voeg er een toe!</p></div>';
+      return;
+    }
+    grid.innerHTML = cards.map(c => {
+      const typeIcon = (c.type || '').includes('YouTube') ? '&#127909;' : (c.type || '').includes('Artikel') ? '&#128240;' : '&#128221;';
+      return `<div class="card" onclick="showDetail('${esc(c.filename)}')">
+        <div class="card-header">
+          <div class="card-title">${esc(c.title)}</div>
+          <div class="card-type">${typeIcon}</div>
+        </div>
+        <div class="card-date">${c.date || ''}</div>
+        <div class="card-tldr">${esc(c.tldr)}</div>
+        <div class="card-footer">
+          ${c.proposals > 0 ? '<span class="card-badge">&#128161; ' + c.proposals + ' voorstellen</span>' : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.filterCards = function() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    renderCards(allCards.filter(c => c.title.toLowerCase().includes(q) || (c.tldr || '').toLowerCase().includes(q)));
+  };
+
+  // ─── Card detail with YouTube embed + edit ──────────
+  function extractYouTubeId(url) {
+    if (!url) return null;
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  window.showDetail = async function(filename) {
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/card/' + encodeURIComponent(filename));
+      const data = await resp.json();
+      currentDetailFile = filename;
+      currentDetailContent = data.content || '';
+
+      // Build HTML with optional YouTube embed
+      let html = markdownToHtml(currentDetailContent);
+
+      // Extract source URL from content
+      const srcMatch = currentDetailContent.match(/\*\*Bron:\*\* (.+)$/m);
+      const srcUrl = srcMatch ? srcMatch[1].trim() : '';
+      const ytId = extractYouTubeId(srcUrl);
+
+      if (ytId) {
+        // Insert YouTube embed after TL;DR section
+        const embedHtml = `<div class="yt-embed"><iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen loading="lazy"></iframe></div>
+          <a class="yt-link" href="${esc(srcUrl)}" target="_blank" rel="noopener">&#9654; Bekijk video op YouTube</a>`;
+        html = html.replace(/(Management Summary|<h2>Management)/i, embedHtml + '$1');
+      }
+
+      document.getElementById('detailContent').innerHTML = html;
+      document.getElementById('editPanel').style.display = 'none';
+      document.getElementById('editCardBtn').style.display = '';
+
+      // Pre-fill edit fields
+      const titleMatch = currentDetailContent.match(/^# (.+)$/m);
+      const tldrMatch = currentDetailContent.match(/## TL;DR\n([\s\S]*?)(?=\n##)/);
+      document.getElementById('editTitle').value = titleMatch ? titleMatch[1] : '';
+      document.getElementById('editTldr').value = tldrMatch ? tldrMatch[1].trim() : '';
+      document.getElementById('editUrl').value = srcUrl;
+      document.getElementById('editNotes').value = '';
+
+      document.getElementById('detailModal').classList.add('visible');
+    } catch(e) { console.error(e); }
+  };
+
+  window.toggleEditCard = function() {
+    const panel = document.getElementById('editPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.saveCardEdit = async function() {
+    if (!currentDetailFile) return;
+    const title = document.getElementById('editTitle').value.trim();
+    const tldr = document.getElementById('editTldr').value.trim();
+    const url = document.getElementById('editUrl').value.trim();
+    const notes = document.getElementById('editNotes').value.trim();
+
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/card/' + encodeURIComponent(currentDetailFile), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, tldr, url, notes })
+      });
+      const data = await resp.json();
+      if (data.error) { alert(data.error); return; }
+      // Reload detail and cards
+      showDetail(currentDetailFile);
+      loadCards();
+      document.getElementById('editPanel').style.display = 'none';
+    } catch(e) { alert('Opslaan mislukt: ' + e.message); }
+  };
+
+  window.showIngestModal = function() { document.getElementById('ingestModal').classList.add('visible'); };
+  window.showLeaderModal = function() { document.getElementById('leaderModal').classList.add('visible'); };
+  window.closeModal = function(id) { document.getElementById(id).classList.remove('visible'); };
+
+  window.doIngest = async function() {
+    const input = document.getElementById('ingestInput').value.trim();
+    if (!input) return;
+    const btn = document.getElementById('ingestBtn');
+    btn.disabled = true;
+    document.getElementById('ingestBtnText').textContent = 'Analyseren...';
+    document.getElementById('ingestSpinner').style.display = '';
+    document.getElementById('ingestError').style.display = 'none';
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/ingest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error + (data.tip ? '\n' + data.tip : ''));
+      closeModal('ingestModal');
+      document.getElementById('ingestInput').value = '';
+      loadCards(); loadProposals();
+    } catch(e) {
+      document.getElementById('ingestError').textContent = e.message;
+      document.getElementById('ingestError').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('ingestBtnText').innerHTML = '&#128218; Analyseer &amp; Opslaan';
+      document.getElementById('ingestSpinner').style.display = 'none';
+    }
+  };
+
+  // ─── Proposals with notes, status, URL ──────────────
+  async function loadProposals() {
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/proposals');
+      const data = await resp.json();
+      const pending = data.pending || [];
+      const approved = data.approved || [];
+
+      const badge = document.getElementById('pendingBadge');
+      if (pending.length > 0) { badge.textContent = pending.length; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+
+      document.getElementById('proposalsList').innerHTML = pending.length
+        ? pending.map((p, i) => `<div class="proposal-item">
+            <h3>${esc(p.title)} <span class="effort-badge effort-${p.effort}">${p.effort}</span></h3>
+            <div class="proposal-meta"><strong>Wat:</strong> ${esc(p.wat)}</div>
+            <div class="proposal-meta"><strong>Waarom:</strong> ${esc(p.waarom)}</div>
+            <div class="proposal-meta" style="color:var(--text3);font-size:11px;">Bron: ${esc(p.file)}</div>
+            <div class="proposal-actions">
+              <button class="btn btn-sm btn-go" onclick="vote(${i},'approve')">&#9989; Goedkeuren</button>
+              <button class="btn btn-sm btn-no" onclick="vote(${i},'reject')">&#10060; Afwijzen</button>
+              <button class="btn btn-sm btn-defer" onclick="vote(${i},'defer')">&#9203; Later</button>
+            </div>
+          </div>`).join('')
+        : '<div class="empty-state" style="padding:30px"><p>Geen openstaande voorstellen</p></div>';
+
+      document.getElementById('approvedList').innerHTML = approved.length
+        ? approved.map((a, i) => `<div class="proposal-item" style="border-color:var(--go)33">
+            <h3>${esc(a.title)}</h3>
+            <div class="proposal-meta">${esc(a.action)}</div>
+            <div class="proposal-notes">
+              <label>Status</label>
+              <select onchange="updateApproved(${i},'status',this.value)">
+                <option value="TODO" ${a.status === 'TODO' ? 'selected' : ''}>TODO</option>
+                <option value="IN PROGRESS" ${a.status === 'IN PROGRESS' ? 'selected' : ''}>IN PROGRESS</option>
+                <option value="DONE" ${a.status === 'DONE' ? 'selected' : ''}>DONE</option>
+              </select>
+              <label>Notities</label>
+              <textarea rows="2" placeholder="Implementatie-notities..." onblur="updateApproved(${i},'notes',this.value)">${esc(a.notes || '')}</textarea>
+              <label>Link (GitHub / Claude Code)</label>
+              <input type="text" placeholder="https://..." value="${esc(a.link || '')}" onblur="updateApproved(${i},'link',this.value)">
+            </div>
+          </div>`).join('')
+        : '<p style="color:var(--text3);font-size:13px;">Nog geen goedgekeurde acties.</p>';
+
+      window._pendingProposals = pending;
+      window._approvedActions = approved;
+    } catch(e) { console.error(e); }
+  }
+
+  window.vote = async function(idx, decision) {
+    const p = window._pendingProposals[idx];
+    if (!p) return;
+    try {
+      await fetch(API + '/api/ptolemaeus/vote', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: p.file, title: p.title, vote: decision })
+      });
+      loadProposals();
+    } catch(e) { console.error(e); }
+  };
+
+  window.updateApproved = async function(idx, field, value) {
+    const a = window._approvedActions[idx];
+    if (!a) return;
+    try {
+      await fetch(API + '/api/ptolemaeus/action', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index: idx, field, value })
+      });
+    } catch(e) { console.error(e); }
+  };
+
+  // ─── Leaders ────────────────────────────────────────
+  async function loadLeaders() {
+    try {
+      const resp = await fetch(API + '/api/ptolemaeus/leaders');
+      const data = await resp.json();
+      const leaders = data.leaders || [];
+      document.getElementById('leadersList').innerHTML = leaders.length
+        ? leaders.map(l => `<div class="leader-item">
+            <div class="leader-info">
+              <h3>${esc(l.name)}</h3>
+              <div class="search-terms">&#128269; ${esc(l.search)}</div>
+              <div class="last-scan">${l.lastScan ? 'Laatste scan: ' + l.lastScan : 'Nog niet gescand'}</div>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="scanLeader('${esc(l.search)}')">&#128225; Scan nu</button>
+          </div>`).join('')
+        : '<div class="empty-state" style="padding:30px"><p>Geen thought leaders geconfigureerd.</p></div>';
+    } catch(e) { console.error(e); }
+  }
+
+  window.addLeader = async function() {
+    const name = document.getElementById('leaderName').value.trim();
+    const search = document.getElementById('leaderSearch').value.trim();
+    if (!name || !search) return;
+    try {
+      await fetch(API + '/api/ptolemaeus/leaders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, search })
+      });
+      closeModal('leaderModal');
+      document.getElementById('leaderName').value = '';
+      document.getElementById('leaderSearch').value = '';
+      loadLeaders();
+    } catch(e) { console.error(e); }
+  };
+
+  window.scanLeader = async function(search) {
+    alert('Radar scan gestart voor: ' + search + '\nDit kan 1-2 minuten duren.');
+  };
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  function markdownToHtml(md) {
+    return md
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+})();
+</script>
+</body>
+</html>
