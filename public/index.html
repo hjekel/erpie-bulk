@@ -1381,16 +1381,7 @@ DataClearance Benelux BV`;
 
   // ─── Reset ──────────────────────────────────────────────
   window.resetAll = function() {
-    currentFile = null;
-    analysisData = null;
-    validationData = null;
-    document.getElementById('fileInput').value = '';
-    document.getElementById('fileName').textContent = '';
-    document.getElementById('textInput').value = '';
-    document.getElementById('results').classList.remove('visible');
-    document.getElementById('validateStatus').classList.remove('visible');
-    document.getElementById('thLive').style.display = 'none';
-    hideError();
+    window.location.reload(true);
   };
 
   // ─── Load Sample ────────────────────────────────────────
