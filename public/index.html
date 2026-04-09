@@ -1448,8 +1448,15 @@ function toggleTheme() {
   btn.textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('erpie-theme', isLight ? 'light' : 'dark');
 }
-// Restore saved theme
-if (localStorage.getItem('erpie-theme') === 'light') {
+// Restore saved theme — also accept ?theme=light from URL
+const _urlTheme = new URLSearchParams(window.location.search).get('theme');
+if (_urlTheme === 'light') {
+  localStorage.setItem('erpie-theme', 'light');
+  document.documentElement.classList.add('light');
+} else if (_urlTheme === 'dark') {
+  localStorage.setItem('erpie-theme', 'dark');
+  document.documentElement.classList.remove('light');
+} else if (localStorage.getItem('erpie-theme') === 'light') {
   document.documentElement.classList.add('light');
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('themeToggle').textContent = '☀️';
